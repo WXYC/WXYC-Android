@@ -24,6 +24,10 @@
         android:layout_alignParentTop="true"
         android:visibility="visible" />
 
+    <!-- include loading screen layout -->
+    <include layout="@layout/loading_screen" />
+
+
     <!-- recyclerview for playlist -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"

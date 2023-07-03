@@ -5,43 +5,33 @@ import com.github.kittinunf.result.Result
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import data.artwork.PlaylistImager
+import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+
 
 class JsonImporter {
 
     private val gson = Gson()
 
-    // data class for playcut
-    data class PlayCutDetails(
-        val rotation: String,
-        val request: String,
-        val songTitle: String,
-        val labelName: String,
-        val artistName: String,
-        val releaseTitle: String
-    )
-
-    // data class for json entries
-    data class JsonEntry(
-        val id: Int,
-        val entryType: String,
-        val playcut: PlayCutDetails,
-        val hour: Long,
-        val chronOrderID: Int
-    )
-
+    val playlistImager = PlaylistImager()
 
     //json feed url
     val jsonURL = "http://wxyc.info/playlists/recentEntries?n=8"
 
 
-    fun fillPlaylist(callback: (MutableList<Pair<String, String>>) -> Unit) {
-        val songDetails = mutableListOf<Pair<String, String>>()
 
+
+    suspend fun fillPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
+        val playlistDetails = mutableListOf<PlaylistDetails>()
 
         // http get request with lambda expression for handling the result
         jsonURL.httpGet().responseString { _, _, result ->
             when (result) {
                 is Result.Success -> {
+                    println("jsonimporter Success")
                     val jsonString = result.value
 
                     // parse json string into an array
@@ -50,49 +40,42 @@ class JsonImporter {
                     // sorts through the entries in the json array
                     for (jsonElement in jsonArray) {
                         // defines val entryType to sort between talksets and songs
-                        val entryType = jsonElement.asJsonObject.get("entryType").asString
-                        // only add "playcuts" to the songDetails
-                        if (entryType == "playcut") {
-                            val playCut = gson.fromJson(jsonElement, JsonEntry::class.java)
-                            playCut.playcut.let { playCutDetails ->
-                                val songTitle = playCutDetails.songTitle
-                                val artistName = playCutDetails.artistName
-                                val songDetail = Pair(songTitle, artistName)
-                                songDetails.add(songDetail)
-                            }
+                        val playCut = gson.fromJson(jsonElement, PlaylistDetails::class.java)
+                        playCut.playcut.let { playCutDetails ->
+                            playlistDetails.add(playCut)
                         }
-                        if (entryType == "talkset") {
-                            val talksetHour = getTalksetHour(jsonElement.asJsonObject)
-                            songDetails.add(Pair("talkset", talksetHour))
-                        }
-                        if (entryType == "breakpoint") {
-                            val breakpointHour = getBreakpointHour(jsonElement.asJsonObject)
-                            songDetails.add(Pair("breakpoint", breakpointHour))
+
+                        // fetches the image url async
+                        runBlocking {
+                            val imageURL = fetchImageAsync(playCut, playlistImager)
+                            imageURL.await()
                         }
                     }
 
-                    callback(songDetails) // invoke the callback with the populated list
+                    callback(playlistDetails) // invoke the callback with the populated list
                 }
                 is Result.Failure -> {
-                    println("json FAILED")
+                    println("jsonimporter FAILED")
                     val error = result.error
                     // Handle the error
                     println("Error: $error")
 
-                    callback(songDetails) // invoke the callback with the empty list or handle the error case separately
+                    callback(playlistDetails) // invoke the callback with the empty list or handle the error case separately
                 }
             }
         }
     }
 
-    private fun getTalksetHour(jsonObject: JsonObject): String {
-        val hour = jsonObject.get("hour").asString
-        return hour
-    }
-
-    private fun getBreakpointHour(jsonObject: JsonObject): String {
-        val hour = jsonObject.get("hour").asString
-        return hour
+    suspend fun fetchImageAsync(playCut: PlaylistDetails, playlistImager: PlaylistImager): Deferred<Unit> = coroutineScope {
+        async {
+            try {
+                playlistImager.fetchImage(playCut)
+            } catch (e: Exception) {
+                // Handle the exception here
+                // You can log the error, display an error message, or take appropriate action
+                e.printStackTrace()
+            }
+        }
     }
 
 }

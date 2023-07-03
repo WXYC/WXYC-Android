@@ -1,6 +1,7 @@
 package com.example.basicmusicplayer
 
 
+import android.app.appsearch.SearchResult
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.media.MediaPlayer
@@ -9,16 +10,21 @@ import android.widget.ProgressBar
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 
-import data.JsonImporter
-import data.PlaylistAdapter
-
 import androidx.recyclerview.widget.RecyclerView
+import data.*
+import kotlinx.coroutines.launch
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
+import com.bumptech.glide.Glide
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 
 //define main activity class and define properties
@@ -27,20 +33,49 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var btnPlayAudio: Button
     private var mediaPlayer: MediaPlayer? = null
     private lateinit var recyclerView: RecyclerView
+    private lateinit var loadingView: View
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var playlistManager = PlaylistManager()
+    private val scope = CoroutineScope(Dispatchers.Main)
+    private val viewManager = ViewManager()
 
-    // lists to store song details
-    var songDetailsList = mutableListOf<Pair<String, String>>()
-    var updatedSongDetailsList = mutableListOf<Pair<String, String>>()
+    private var updatedPlaylistDetailsList: MutableList<PlaylistDetails> = mutableListOf()
+
+    private lateinit var playlistDetailsList: MutableList<PlaylistDetails>
+
+
+
+
+
 
 
     // initializes the activity and sets the layout
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        //sets up initial playlist
-        playlistSetUp()
+        // LoadingView used while the recyclerView is preparing
+        loadingView = findViewById(R.id.loading_screen)
+        recyclerView = findViewById(R.id.recycler_view)
+
+
+        showLoadingView()
+
+
+        //sets up initial playlist and then shows the playlist when ready
+
+        scope.launch{
+            playlistDetailsList = playlistManager.fetchPlaylist()
+            viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
+            showContentView()
+            println("here are the playlist details right after launch")
+            println(playlistDetailsList)
+        }
+
+
+
+
 
 
         // initialization of properties
@@ -48,11 +83,32 @@ class PlayerActivity : AppCompatActivity() {
         loadingIndicator.visibility = View.INVISIBLE
         btnPlayAudio = findViewById(R.id.btnPlayAudio)
 
-        //refreshes the playlist every 30 seconds
+
+        //refreshes the playlist every 30 seconds. should be a prettier way to do this, like just put it inside
         val playlistRefresh = Runnable {
-            playlistUpdater()
+            scope.launch {
+                if (updatedPlaylistDetailsList.isNotEmpty()){
+                    updatedPlaylistDetailsList.clear()
+                    println("cleared it")
+                }
+
+                //here lies the problem: on the first run it is populated but after
+                println("here are the 'og' playlist details right at the first checkpoint!!")
+                println(playlistDetailsList)
+                updatedPlaylistDetailsList = playlistManager.fetchPlaylist()
+                println("current view playlist")
+                println(playlistDetailsList)
+                println("updated playlist")
+                println(updatedPlaylistDetailsList)
+
+                if (playlistDetailsList != updatedPlaylistDetailsList){
+                    println("they are different!")
+                }
+            }
         }
-        executor.scheduleAtFixedRate(playlistRefresh, 5, 30, TimeUnit.SECONDS)
+
+        executor.scheduleAtFixedRate(playlistRefresh, 5, 10, TimeUnit.SECONDS)
+
 
 
         // listens for button to be clicked
@@ -61,32 +117,15 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun playlistSetUp() {
-        // initialize the JsonImporter class
-        val jsonImporter = JsonImporter()
-        // countdownlatch initialized to wait for callback to complete
-        val latch = CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
 
+    private fun showLoadingView() {
+        loadingView.visibility = View.VISIBLE
+        recyclerView.visibility = View.GONE
+    }
 
-        val callback: (MutableList<Pair<String, String>>) -> Unit = { songDetails ->
-            songDetailsList.addAll(songDetails)
-            // Process the song details here
-            latch.countDown()
-        }
-
-        jsonImporter.fillPlaylist(callback)
-
-        // Wait for the callback to complete
-        latch.await()
-
-        // RecyclerView set-up
-        recyclerView = findViewById(R.id.recycler_view)
-        recyclerView.adapter = PlaylistAdapter(songDetailsList)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.setHasFixedSize(true)  //change back to true
-
-        return
-
+    private fun showContentView() {
+        loadingView.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
     }
 
 
@@ -146,36 +185,5 @@ class PlayerActivity : AppCompatActivity() {
         mediaPlayer = null
     }
 
-
-    private fun playlistUpdater() {
-        val jsonImporter = JsonImporter()
-        // countdownlatch initialized
-        val latch =
-            CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
-        // list to store song details
-        if (updatedSongDetailsList.isNotEmpty()) {
-            updatedSongDetailsList.clear()
-        }
-        val callback: (MutableList<Pair<String, String>>) -> Unit = { songDetails ->
-            updatedSongDetailsList.addAll(songDetails)
-            // Process the song details here
-            latch.countDown()
-        }
-        jsonImporter.fillPlaylist(callback)
-        // Wait for the callback to complete
-        latch.await()
-
-        if (updatedSongDetailsList[0] != songDetailsList[0]) {
-            val newSong = updatedSongDetailsList[0]
-            songDetailsList.add(0, newSong)
-            //runs the adapter on the main thread
-            runOnUiThread {
-                // Notify the adapter about the data change
-                for (i in 0 until songDetailsList.size) {
-                    recyclerView.adapter?.notifyItemChanged(i)
-                }
-            }
-            return
-        }
-    }
 }
+

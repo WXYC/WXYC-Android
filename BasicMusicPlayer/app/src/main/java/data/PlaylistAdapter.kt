@@ -7,12 +7,13 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.basicmusicplayer.R
 import java.text.SimpleDateFormat
 import java.util.*
 
 //adapter class that binds the playlist data to the recyclerview
-class PlaylistAdapter(private val playlistData: MutableList<Pair<String, String>>) :
+class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
     RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder>() {
 
     //called by recyclerview when its time to create a new viewholder
@@ -28,26 +29,30 @@ class PlaylistAdapter(private val playlistData: MutableList<Pair<String, String>
     override fun onBindViewHolder(holder: PlaylistViewHolder, position: Int) {
         val currentItem = playlistData[position]
 
-        if (currentItem.first == "talkset") {
+        if (currentItem.entryType == "talkset") {
             //adjusts views
             holder.cardView.visibility = View.GONE
             holder.entryTypesTextView.visibility = View.VISIBLE
-            holder.entryTypesTextView.text = currentItem.first
+            holder.entryTypesTextView.text = currentItem.entryType
 
-        } else if (currentItem.first == "breakpoint") {
+
+        } else if (currentItem.entryType == "breakpoint") {
             // adjusts views
             holder.cardView.visibility = View.GONE
             holder.entryTypesTextView.visibility = View.VISIBLE
 
-            val convertedTime = convertTime(currentItem.second)
+            val convertedTime = convertTime(currentItem.hour)
 
             holder.entryTypesTextView.text = convertedTime
 
         } else {
             //fills data
-            holder.imageView.setImageResource(R.drawable.music_note)
-            holder.songName.text = currentItem.first
-            holder.artistName.text = currentItem.second
+            //holder.imageView.setImageResource(R.drawable.music_note)
+            holder.songName.text = currentItem.playcut.songTitle
+            holder.artistName.text = currentItem.playcut.artistName
+            Glide.with(holder.itemView)
+                .load(currentItem.playcut.imageURL)
+                .into(holder.imageView)
         }
     }
 
@@ -65,10 +70,11 @@ class PlaylistAdapter(private val playlistData: MutableList<Pair<String, String>
     }
 
     // function to convert breakpoint/talkset timestamp
-    private fun convertTime(timestampString: String): String {
+    private fun convertTime(timestampString: Long): String {
         val timestamp = timestampString.toLong()
         val date = Date(timestamp)
         val formatter = SimpleDateFormat("h a", Locale.getDefault())
+        formatter.timeZone = TimeZone.getTimeZone("America/New_York")
         return formatter.format(date)
     }
 
