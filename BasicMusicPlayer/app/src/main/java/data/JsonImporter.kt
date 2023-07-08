@@ -12,6 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 
+// imports the data that fills the playlists
 class JsonImporter {
 
     private val gson = Gson()
@@ -19,24 +20,22 @@ class JsonImporter {
     val playlistImager = PlaylistImager()
 
     //json feed url
-    val jsonURL = "http://wxyc.info/playlists/recentEntries?n=8"
+    val jsonFullURL = "http://wxyc.info/playlists/recentEntries?n=10"
+
+    val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=5"
 
 
-
-
-    suspend fun fillPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
+    suspend fun fillFullPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
         val playlistDetails = mutableListOf<PlaylistDetails>()
 
         // http get request with lambda expression for handling the result
-        jsonURL.httpGet().responseString { _, _, result ->
+        jsonFullURL.httpGet().responseString { _, _, result ->
             when (result) {
                 is Result.Success -> {
                     println("jsonimporter Success")
                     val jsonString = result.value
-
                     // parse json string into an array
                     val jsonArray = JsonParser.parseString(jsonString).asJsonArray
-
                     // sorts through the entries in the json array
                     for (jsonElement in jsonArray) {
                         // defines val entryType to sort between talksets and songs
@@ -44,14 +43,12 @@ class JsonImporter {
                         playCut.playcut.let { playCutDetails ->
                             playlistDetails.add(playCut)
                         }
-
                         // fetches the image url async
                         runBlocking {
                             val imageURL = fetchImageAsync(playCut, playlistImager)
                             imageURL.await()
                         }
                     }
-
                     callback(playlistDetails) // invoke the callback with the populated list
                 }
                 is Result.Failure -> {
@@ -66,7 +63,47 @@ class JsonImporter {
         }
     }
 
-    suspend fun fetchImageAsync(playCut: PlaylistDetails, playlistImager: PlaylistImager): Deferred<Unit> = coroutineScope {
+
+    suspend fun fillLittlePlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
+        val playlistDetails = mutableListOf<PlaylistDetails>()
+
+        // http get request with lambda expression for handling the result
+        jsonLittleURL.httpGet().responseString { _, _, result ->
+            when (result) {
+                is Result.Success -> {
+                    println("jsonimporter Success")
+                    val jsonString = result.value
+                    // parse json string into an array
+                    val jsonArray = JsonParser.parseString(jsonString).asJsonArray
+                    // sorts through the entries in the json array
+                    for (jsonElement in jsonArray) {
+                        // defines val entryType to sort between talksets and songs
+                        val playCut = gson.fromJson(jsonElement, PlaylistDetails::class.java)
+                        playCut.playcut.let { playCutDetails ->
+                            playlistDetails.add(playCut)
+                        }
+
+                        // fetches the image url async
+                        runBlocking {
+                            val imageURL = fetchImageAsync(playCut, playlistImager)
+                            imageURL.await()
+                        }
+                    }
+                    callback(playlistDetails) // invoke the callback with the populated list
+                }
+                is Result.Failure -> {
+                    println("jsonimporter FAILED")
+                    val error = result.error
+                    // Handle the error
+                    println("Error: $error")
+
+                    callback(playlistDetails) // invoke the callback with the empty list or handle the error case separately
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchImageAsync(playCut: PlaylistDetails, playlistImager: PlaylistImager): Deferred<Unit> = coroutineScope {
         async {
             try {
                 playlistImager.fetchImage(playCut)

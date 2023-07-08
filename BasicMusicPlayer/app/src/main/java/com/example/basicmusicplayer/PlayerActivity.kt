@@ -16,18 +16,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import data.*
 import kotlinx.coroutines.launch
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 
 import com.bumptech.glide.Glide
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import java.util.concurrent.*
 
 
-//define main activity class and define properties
+// Entrypoint of app that manages main functionalitty
 class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var btnPlayAudio: Button
@@ -38,15 +36,10 @@ class PlayerActivity : AppCompatActivity() {
     private var playlistManager = PlaylistManager()
     private val scope = CoroutineScope(Dispatchers.Main)
     private val viewManager = ViewManager()
-
-    private var updatedPlaylistDetailsList: MutableList<PlaylistDetails> = mutableListOf()
-
-    private lateinit var playlistDetailsList: MutableList<PlaylistDetails>
-
-
-
-
-
+    private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
+        get () = field
+    private val updatedPlaylistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
+        get () = field
 
 
     // initializes the activity and sets the layout
@@ -58,24 +51,15 @@ class PlayerActivity : AppCompatActivity() {
         // LoadingView used while the recyclerView is preparing
         loadingView = findViewById(R.id.loading_screen)
         recyclerView = findViewById(R.id.recycler_view)
-
-
         showLoadingView()
 
-
         //sets up initial playlist and then shows the playlist when ready
-
         scope.launch{
-            playlistDetailsList = playlistManager.fetchPlaylist()
+            setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
             viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
-            showContentView()
-            println("here are the playlist details right after launch")
             println(playlistDetailsList)
+            showContentView()
         }
-
-
-
-
 
 
         // initialization of properties
@@ -84,37 +68,54 @@ class PlayerActivity : AppCompatActivity() {
         btnPlayAudio = findViewById(R.id.btnPlayAudio)
 
 
-        //refreshes the playlist every 30 seconds. should be a prettier way to do this, like just put it inside
+
+        //refreshes the playlist every 30 seconds. will abstract this into its own function
         val playlistRefresh = Runnable {
             scope.launch {
-                if (updatedPlaylistDetailsList.isNotEmpty()){
-                    updatedPlaylistDetailsList.clear()
-                    println("cleared it")
+                val updatedSubList = playlistManager.fetchLittlePlaylist()
+                val currentSubList = playlistDetailsList.subList(0, 5)
+
+                if (currentSubList != updatedSubList){
+                    println("current sublist")
+                    println(currentSubList)
+                    println("updated sublist")
+                    println(updatedSubList)
+                    val updatedFullList = playlistManager.fetchFullPlaylist()
+                    setUpdatedPlaylistDetailsList(updatedFullList)
+                    println("update time")
+                    playlistDetailsList.clear()
+                    playlistDetailsList.addAll(updatedPlaylistDetailsList)
+
+                    runOnUiThread {
+                        // Notify the adapter about the data change
+                        for (i in 0 until playlistDetailsList.size) {
+                            recyclerView.adapter?.notifyItemChanged(i)
+                        }
+                    }
+                }
+                else {
+                    println("no update")
                 }
 
-                //here lies the problem: on the first run it is populated but after
-                println("here are the 'og' playlist details right at the first checkpoint!!")
-                println(playlistDetailsList)
-                updatedPlaylistDetailsList = playlistManager.fetchPlaylist()
-                println("current view playlist")
-                println(playlistDetailsList)
-                println("updated playlist")
-                println(updatedPlaylistDetailsList)
-
-                if (playlistDetailsList != updatedPlaylistDetailsList){
-                    println("they are different!")
-                }
             }
         }
 
-        executor.scheduleAtFixedRate(playlistRefresh, 5, 10, TimeUnit.SECONDS)
-
-
+        executor.scheduleAtFixedRate(playlistRefresh, 30, 30, TimeUnit.SECONDS)
 
         // listens for button to be clicked
         btnPlayAudio.setOnClickListener {
             toggleAudio()
         }
+    }
+
+    private fun setPlaylistDetailsList(list: List<PlaylistDetails>) {
+        playlistDetailsList.clear()
+        playlistDetailsList.addAll(list)
+    }
+
+    private fun setUpdatedPlaylistDetailsList(list: List<PlaylistDetails>) {
+        updatedPlaylistDetailsList.clear()
+        updatedPlaylistDetailsList.addAll(list)
     }
 
 
