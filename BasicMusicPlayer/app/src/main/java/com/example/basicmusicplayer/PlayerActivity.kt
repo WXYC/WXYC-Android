@@ -25,7 +25,7 @@ import kotlinx.coroutines.GlobalScope
 import java.util.concurrent.*
 
 
-// Entrypoint of app that manages main functionalitty
+// Entrypoint of app that manages main functionality
 class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var btnPlayAudio: Button
@@ -37,9 +37,6 @@ class PlayerActivity : AppCompatActivity() {
     private val scope = CoroutineScope(Dispatchers.Main)
     private val viewManager = ViewManager()
     private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
-        get () = field
-    private val updatedPlaylistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
-        get () = field
 
 
     // initializes the activity and sets the layout
@@ -57,7 +54,6 @@ class PlayerActivity : AppCompatActivity() {
         scope.launch{
             setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
             viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
-            println(playlistDetailsList)
             showContentView()
         }
 
@@ -69,38 +65,63 @@ class PlayerActivity : AppCompatActivity() {
 
 
 
+
         //refreshes the playlist every 30 seconds. will abstract this into its own function
         val playlistRefresh = Runnable {
             scope.launch {
+
+                // this section compares the first 5 entries of the current list and an updates
+
+                // updated playlist values
                 val updatedSubList = playlistManager.fetchLittlePlaylist()
-                val currentSubList = playlistDetailsList.subList(0, 5)
+                val currentSubList = playlistDetailsList.subList(0, 6)
 
-                if (currentSubList != updatedSubList){
-                    println("current sublist")
-                    println(currentSubList)
-                    println("updated sublist")
-                    println(updatedSubList)
+                var editPlaylist = false
+                var newEntry = false
+
+
+                //  checks if the lists are the same
+                if (!compareLists(updatedSubList, currentSubList)){
+                    // this determined if the two sublists are different.  now we need to check if
+                    // an entry was added or there was an edit to the playlist (with no added entry)
+
+                    // checks if the content in the lists are the same i.e. just an edit in order
+                    if (compareListContent(updatedSubList, currentSubList)){
+                        editPlaylist = true
+                    }
+                    // new entry
+                    else{
+                        newEntry = true
+                    }
+
                     val updatedFullList = playlistManager.fetchFullPlaylist()
-                    setUpdatedPlaylistDetailsList(updatedFullList)
                     println("update time")
-                    playlistDetailsList.clear()
-                    playlistDetailsList.addAll(updatedPlaylistDetailsList)
-
                     runOnUiThread {
-                        // Notify the adapter about the data change
-                        for (i in 0 until playlistDetailsList.size) {
-                            recyclerView.adapter?.notifyItemChanged(i)
+
+                        // replaces 6 most recent entries with updated order
+                        if (editPlaylist){
+                            println("only an edit in the playlist")
+                            val rangeToRemove = minOf(6, playlistDetailsList.size)
+                            playlistDetailsList.subList(0, rangeToRemove).clear()
+                            playlistDetailsList.addAll(0, (updatedFullList.subList(0, 6)))
+                            recyclerView.adapter?.notifyItemRangeChanged(0, 6)
+                        }
+                        // adds new entry to the playlist
+                        else if (newEntry) {
+                            println("addition to the playlist")
+                            val rangeToRemove = minOf(5, playlistDetailsList.size)
+                            playlistDetailsList.subList(0, rangeToRemove).clear()
+                            playlistDetailsList.addAll(0, (updatedFullList.subList(0, 6)))
+                            recyclerView.adapter?.notifyDataSetChanged()
                         }
                     }
                 }
                 else {
                     println("no update")
                 }
-
             }
         }
-
-        executor.scheduleAtFixedRate(playlistRefresh, 30, 30, TimeUnit.SECONDS)
+        executor.scheduleAtFixedRate(playlistRefresh, 10, 30, TimeUnit.SECONDS)
 
         // listens for button to be clicked
         btnPlayAudio.setOnClickListener {
@@ -108,28 +129,55 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    // checks if lists are the same
+    private fun compareLists(listOne: List<PlaylistDetails>, listTwo: List<PlaylistDetails>): Boolean{
+        if (listOne.size != listTwo.size) {
+            println("list comparison: FALSE (different size lists)")
+            return false
+        }
+        for (i in listOne.indices){
+            val playCutIdOne = listOne[i].id
+            val playCutIdTwo = listTwo[i].id
+            if (playCutIdOne != playCutIdTwo){
+                return false
+            }
+        }
+        return true
+    }
+
+    // checks to see if the values in the list the same regardless of order
+    private fun compareListContent(listOne: List<PlaylistDetails>, listTwo: List<PlaylistDetails>): Boolean{
+        val setOne = listOne.map { it.id }.toSet()
+        println(setOne)
+        val setTwo = listTwo.map { it.id }.toSet()
+        println(setTwo)
+        if (setOne != setTwo){
+            return false
+        }
+        return true
+    }
+
+
+    // setter method for playlistDetailList
     private fun setPlaylistDetailsList(list: List<PlaylistDetails>) {
         playlistDetailsList.clear()
         playlistDetailsList.addAll(list)
     }
 
-    private fun setUpdatedPlaylistDetailsList(list: List<PlaylistDetails>) {
-        updatedPlaylistDetailsList.clear()
-        updatedPlaylistDetailsList.addAll(list)
-    }
 
-
+    // shows the loading view
     private fun showLoadingView() {
         loadingView.visibility = View.VISIBLE
         recyclerView.visibility = View.GONE
     }
 
+    //shows the content view
     private fun showContentView() {
         loadingView.visibility = View.GONE
         recyclerView.visibility = View.VISIBLE
     }
 
-
+    // toggles the audio
     private fun toggleAudio() {
         // handles extra, unnecessary clicks of button
         if (loadingIndicator.visibility == View.VISIBLE) {
@@ -148,11 +196,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
 
+    // plays the stream of the radi
     private fun playRadio() {
         val wxycURL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
-
         loadingIndicator.visibility = View.VISIBLE
-
         //media player created and initialized
         mediaPlayer = MediaPlayer().apply {
             setAudioAttributes(

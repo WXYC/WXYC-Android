@@ -11,23 +11,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
-
-// imports the data that fills the playlists
+// class imports the json playlist information
 class JsonImporter {
-
     private val gson = Gson()
 
-    val playlistImager = PlaylistImager()
-
     //json feed url
-    val jsonFullURL = "http://wxyc.info/playlists/recentEntries?n=10"
+    val jsonFullURL = "http://wxyc.info/playlists/recentEntries?n=25"
+    val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=6"
 
-    val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=5"
 
-
-    suspend fun fillFullPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
+    fun fillFullPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
         val playlistDetails = mutableListOf<PlaylistDetails>()
-
         // http get request with lambda expression for handling the result
         jsonFullURL.httpGet().responseString { _, _, result ->
             when (result) {
@@ -43,11 +37,6 @@ class JsonImporter {
                         playCut.playcut.let { playCutDetails ->
                             playlistDetails.add(playCut)
                         }
-                        // fetches the image url async
-                        runBlocking {
-                            val imageURL = fetchImageAsync(playCut, playlistImager)
-                            imageURL.await()
-                        }
                     }
                     callback(playlistDetails) // invoke the callback with the populated list
                 }
@@ -56,7 +45,6 @@ class JsonImporter {
                     val error = result.error
                     // Handle the error
                     println("Error: $error")
-
                     callback(playlistDetails) // invoke the callback with the empty list or handle the error case separately
                 }
             }
@@ -64,9 +52,8 @@ class JsonImporter {
     }
 
 
-    suspend fun fillLittlePlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
+    fun fillLittlePlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
         val playlistDetails = mutableListOf<PlaylistDetails>()
-
         // http get request with lambda expression for handling the result
         jsonLittleURL.httpGet().responseString { _, _, result ->
             when (result) {
@@ -82,12 +69,6 @@ class JsonImporter {
                         playCut.playcut.let { playCutDetails ->
                             playlistDetails.add(playCut)
                         }
-
-                        // fetches the image url async
-                        runBlocking {
-                            val imageURL = fetchImageAsync(playCut, playlistImager)
-                            imageURL.await()
-                        }
                     }
                     callback(playlistDetails) // invoke the callback with the populated list
                 }
@@ -96,23 +77,12 @@ class JsonImporter {
                     val error = result.error
                     // Handle the error
                     println("Error: $error")
-
                     callback(playlistDetails) // invoke the callback with the empty list or handle the error case separately
                 }
             }
         }
     }
 
-    private suspend fun fetchImageAsync(playCut: PlaylistDetails, playlistImager: PlaylistImager): Deferred<Unit> = coroutineScope {
-        async {
-            try {
-                playlistImager.fetchImage(playCut)
-            } catch (e: Exception) {
-                // Handle the exception here
-                // You can log the error, display an error message, or take appropriate action
-                e.printStackTrace()
-            }
-        }
-    }
+
 
 }
