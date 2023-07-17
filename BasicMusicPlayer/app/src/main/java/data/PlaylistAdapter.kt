@@ -105,10 +105,6 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
     }
 
 
-
-
-
-
 }
 
 

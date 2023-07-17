@@ -20,6 +20,7 @@ class JsonImporter {
     val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=6"
 
 
+    // fills the full playlist
     fun fillFullPlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
         val playlistDetails = mutableListOf<PlaylistDetails>()
         // http get request with lambda expression for handling the result
@@ -51,7 +52,7 @@ class JsonImporter {
         }
     }
 
-
+    // fills a playlist with only the 5 most recent entries
     fun fillLittlePlaylist(callback: (MutableList<PlaylistDetails>) -> Unit) {
         val playlistDetails = mutableListOf<PlaylistDetails>()
         // http get request with lambda expression for handling the result
@@ -82,7 +83,6 @@ class JsonImporter {
             }
         }
     }
-
 
 
 }

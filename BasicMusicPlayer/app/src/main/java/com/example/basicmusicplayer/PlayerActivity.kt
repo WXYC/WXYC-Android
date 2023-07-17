@@ -51,7 +51,7 @@ class PlayerActivity : AppCompatActivity() {
         showLoadingView()
 
         //sets up initial playlist and then shows the playlist when ready
-        scope.launch{
+        scope.launch {
             setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
             viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
             showContentView()
@@ -62,8 +62,6 @@ class PlayerActivity : AppCompatActivity() {
         loadingIndicator = findViewById(R.id.loading_indicator)
         loadingIndicator.visibility = View.INVISIBLE
         btnPlayAudio = findViewById(R.id.btnPlayAudio)
-
-
 
 
         //refreshes the playlist every 30 seconds. will abstract this into its own function
@@ -81,16 +79,16 @@ class PlayerActivity : AppCompatActivity() {
 
 
                 //  checks if the lists are the same
-                if (!compareLists(updatedSubList, currentSubList)){
+                if (!compareLists(updatedSubList, currentSubList)) {
                     // this determined if the two sublists are different.  now we need to check if
                     // an entry was added or there was an edit to the playlist (with no added entry)
 
                     // checks if the content in the lists are the same i.e. just an edit in order
-                    if (compareListContent(updatedSubList, currentSubList)){
+                    if (compareListContent(updatedSubList, currentSubList)) {
                         editPlaylist = true
                     }
                     // new entry
-                    else{
+                    else {
                         newEntry = true
                     }
 
@@ -99,7 +97,7 @@ class PlayerActivity : AppCompatActivity() {
                     runOnUiThread {
 
                         // replaces 6 most recent entries with updated order
-                        if (editPlaylist){
+                        if (editPlaylist) {
                             println("only an edit in the playlist")
                             val rangeToRemove = minOf(6, playlistDetailsList.size)
                             playlistDetailsList.subList(0, rangeToRemove).clear()
@@ -115,8 +113,7 @@ class PlayerActivity : AppCompatActivity() {
                             recyclerView.adapter?.notifyDataSetChanged()
                         }
                     }
-                }
-                else {
+                } else {
                     println("no update")
                 }
             }
@@ -130,15 +127,18 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     // checks if lists are the same
-    private fun compareLists(listOne: List<PlaylistDetails>, listTwo: List<PlaylistDetails>): Boolean{
+    private fun compareLists(
+        listOne: List<PlaylistDetails>,
+        listTwo: List<PlaylistDetails>
+    ): Boolean {
         if (listOne.size != listTwo.size) {
             println("list comparison: FALSE (different size lists)")
             return false
         }
-        for (i in listOne.indices){
+        for (i in listOne.indices) {
             val playCutIdOne = listOne[i].id
             val playCutIdTwo = listTwo[i].id
-            if (playCutIdOne != playCutIdTwo){
+            if (playCutIdOne != playCutIdTwo) {
                 return false
             }
         }
@@ -146,12 +146,15 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     // checks to see if the values in the list the same regardless of order
-    private fun compareListContent(listOne: List<PlaylistDetails>, listTwo: List<PlaylistDetails>): Boolean{
+    private fun compareListContent(
+        listOne: List<PlaylistDetails>,
+        listTwo: List<PlaylistDetails>
+    ): Boolean {
         val setOne = listOne.map { it.id }.toSet()
         println(setOne)
         val setTwo = listTwo.map { it.id }.toSet()
         println(setTwo)
-        if (setOne != setTwo){
+        if (setOne != setTwo) {
             return false
         }
         return true

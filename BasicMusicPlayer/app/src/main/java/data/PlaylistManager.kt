@@ -19,7 +19,8 @@ class PlaylistManager {
             // initialize the JsonImporter class
             val jsonImporter = JsonImporter()
             // countdownlatch initialized to wait for callback to complete
-            val latch = CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
+            val latch =
+                CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
 
             val detailsCallback: (MutableList<PlaylistDetails>) -> Unit = { details ->
                 playlist.addAll(details)
@@ -43,7 +44,8 @@ class PlaylistManager {
             // initialize the JsonImporter class
             val jsonImporter = JsonImporter()
             // countdownlatch initialized to wait for callback to complete
-            val latch = CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
+            val latch =
+                CountDownLatch(1) // this can be adapted to more advanced asynch programming if necessary
 
             val detailsCallback: (MutableList<PlaylistDetails>) -> Unit = { details ->
                 playlist.addAll(details)
@@ -56,7 +58,6 @@ class PlaylistManager {
             return@withContext playlist
         }
     }
-
 
 
     // fetches the image urls for given playlist using asynch tasks

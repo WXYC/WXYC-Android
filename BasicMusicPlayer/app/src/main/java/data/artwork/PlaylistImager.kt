@@ -36,8 +36,7 @@ class PlaylistImager {
 
                     if (imageUrl != null) {
                         playcut.playcut.imageURL = imageUrl
-                    }
-                    else{
+                    } else {
                         println("discogs null url")
                     }
                 } else {
