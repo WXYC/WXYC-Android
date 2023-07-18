@@ -5,44 +5,37 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".PlayerActivity">
-    
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/songs_text"
-        android:textColor="@color/black"
-        android:text="Current Song"
-        android:textSize="20dp"
-        android:textStyle="bold"
-        android:padding="10dp"
-        android:layout_centerHorizontal="true" />
 
-    <TextView
-        android:id="@+id/jsonDataTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-
-    <ProgressBar
-        android:id="@+id/loading_indicator"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_above="@id/btnPlayAudio"
-        android:visibility="visible" />
-
+    <!-- toggle button -->
     <Button
         android:id="@+id/btnPlayAudio"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Play/pause wxyc"
-        android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:text="Play/pause wxyc" />
+
+    <!-- loading indicator -->
+    <ProgressBar
+        android:id="@+id/loading_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:visibility="visible" />
+
+    <!-- include loading screen layout -->
+    <include layout="@layout/loading_screen" />
 
 
-
-
-
+    <!-- recyclerview for playlist -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/btnPlayAudio"
+        android:clipToPadding="false"
+        android:padding="4dp"
+        tools:listitem="@layout/song_item" />
 
 </RelativeLayout>
