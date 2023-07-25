@@ -63,10 +63,9 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
 
         } else {
             //fills data
-            holder.imageView.setImageResource(R.drawable.music_note)
+            holder.imageView.setImageResource(R.drawable.wxyc_slash_logo)
             holder.songName.text = currentItem.playcut.songTitle
             holder.artistName.text = currentItem.playcut.artistName
-
             currentItem.playcut.imageURL?.let { url ->
                 imageLoader.loadImage(holder.imageView, url)
             }
@@ -104,6 +103,22 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
         return position
     }
 
+    fun centerImage(imageView: ImageView) {
+        imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        imageView.setImageResource(R.drawable.wxyc_slash_logo)
+    }
+
+
+    fun resetToDefault(imageView: ImageView) {
+        imageView.scaleType = ImageView.ScaleType.FIT_CENTER // or any other default scale type you desire
+        imageView.setImageResource(R.drawable.wxyc_slash_logo)
+
+        // Reset the layout parameters to default values (MATCH_PARENT for width and height)
+        val layoutParams = imageView.layoutParams
+        layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        imageView.layoutParams = layoutParams
+    }
 
 }
 

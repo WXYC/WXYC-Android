@@ -16,8 +16,8 @@ class JsonImporter {
     private val gson = Gson()
 
     //json feed url
-    val jsonFullURL = "http://wxyc.info/playlists/recentEntries?n=25"
-    val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=6"
+    val jsonFullURL = "http://wxyc.info/playlists/recentEntries?n=50"
+    val jsonLittleURL = "http://wxyc.info/playlists/recentEntries?n=12"
 
 
     // fills the full playlist

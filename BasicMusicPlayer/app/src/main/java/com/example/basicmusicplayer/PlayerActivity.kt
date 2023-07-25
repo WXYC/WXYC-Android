@@ -45,33 +45,26 @@ class PlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        // LoadingView used while the recyclerView is preparing
-        loadingView = findViewById(R.id.loading_screen)
-        recyclerView = findViewById(R.id.recycler_view)
-        showLoadingView()
-
-        //sets up initial playlist and then shows the playlist when ready
-        scope.launch {
-            setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
-            viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
-            showContentView()
-        }
-
-
-        // initialization of properties
-        loadingIndicator = findViewById(R.id.loading_indicator)
-        loadingIndicator.visibility = View.INVISIBLE
-        btnPlayAudio = findViewById(R.id.btnPlayAudio)
+        initializeActivity()
 
 
         //refreshes the playlist every 30 seconds. will abstract this into its own function
         val playlistRefresh = Runnable {
             scope.launch {
-
-                // this section compares the first 5 entries of the current list and an updates
+                if (playlistDetailsList.size < 6){
+                    println("playlist is not ready")
+                    initializeActivity()
+                    return@launch
+                }
+                // this section compares the first 7 entries of the current list and an updates
 
                 // updated playlist values
-                val updatedSubList = playlistManager.fetchLittlePlaylist()
+                var updatedSubList = playlistManager.fetchLittlePlaylist()
+
+                if (updatedSubList.size != 6){
+                    updatedSubList = updatedSubList.subList(0,6)
+                }
+
                 val currentSubList = playlistDetailsList.subList(0, 6)
 
                 var editPlaylist = false
@@ -92,24 +85,24 @@ class PlayerActivity : AppCompatActivity() {
                         newEntry = true
                     }
 
-                    val updatedFullList = playlistManager.fetchFullPlaylist()
+                    //COMPARISON PART OVER
+
+                    val updatedSublistWithImages = playlistManager.fetchLittlePlaylistWithImages()
                     println("update time")
                     runOnUiThread {
-
-                        // replaces 6 most recent entries with updated order
+                        // replaces 7 most recent entries with updated order
                         if (editPlaylist) {
                             println("only an edit in the playlist")
-                            val rangeToRemove = minOf(6, playlistDetailsList.size)
-                            playlistDetailsList.subList(0, rangeToRemove).clear()
-                            playlistDetailsList.addAll(0, (updatedFullList.subList(0, 6)))
+                            playlistDetailsList.subList(0, 6).clear()
+                            playlistDetailsList.addAll(0, (updatedSublistWithImages.subList(0, 6)))
                             recyclerView.adapter?.notifyItemRangeChanged(0, 6)
                         }
                         // adds new entry to the playlist
                         else if (newEntry) {
                             println("addition to the playlist")
-                            val rangeToRemove = minOf(5, playlistDetailsList.size)
-                            playlistDetailsList.subList(0, rangeToRemove).clear()
-                            playlistDetailsList.addAll(0, (updatedFullList.subList(0, 6)))
+                            //val rangeToRemove = minOf(5, playlistDetailsList.size)
+                            playlistDetailsList.subList(0, 5).clear()
+                            playlistDetailsList.addAll(0, updatedSublistWithImages.subList(0, 6))
                             recyclerView.adapter?.notifyDataSetChanged()
                         }
                     }
@@ -118,12 +111,33 @@ class PlayerActivity : AppCompatActivity() {
                 }
             }
         }
-        executor.scheduleAtFixedRate(playlistRefresh, 10, 30, TimeUnit.SECONDS)
+        executor.scheduleAtFixedRate(playlistRefresh, 20, 30, TimeUnit.SECONDS)
 
         // listens for button to be clicked
         btnPlayAudio.setOnClickListener {
             toggleAudio()
         }
+    }
+
+    private fun initializeActivity() {
+        // LoadingView used while the recyclerView is preparing
+        loadingView = findViewById(R.id.loading_screen)
+        recyclerView = findViewById(R.id.recycler_view)
+        showLoadingView()
+
+        //sets up initial playlist and then shows the playlist when ready
+        scope.launch {
+            setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
+            viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
+            showContentView()
+        }
+
+
+        // initialization of properties
+        loadingIndicator = findViewById(R.id.loading_indicator)
+        loadingIndicator.visibility = View.INVISIBLE
+        btnPlayAudio = findViewById(R.id.btnPlayAudio)
+
     }
 
     // checks if lists are the same
