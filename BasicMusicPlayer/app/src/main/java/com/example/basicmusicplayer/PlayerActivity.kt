@@ -2,6 +2,7 @@ package com.example.basicmusicplayer
 
 
 import android.app.appsearch.SearchResult
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.media.MediaPlayer
@@ -22,14 +23,19 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import playback.AudioPlaybackService
 import java.util.concurrent.*
+
+// constants used for selecting the range of the playlist to update
+private const val UPDATE_UPPER_VALUE = 6
+private const val UPDATE_LOWER_VALUE = 0
+private const val NEW_ENTRY_UPDATE_UPPER_VALUE = 5
 
 
 // Entrypoint of app that manages main functionality
 class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var btnPlayAudio: Button
-    private var mediaPlayer: MediaPlayer? = null
     private lateinit var recyclerView: RecyclerView
     private lateinit var loadingView: View
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
@@ -60,7 +66,6 @@ class PlayerActivity : AppCompatActivity() {
 
                 // updated playlist values
                 var updatedSubList = playlistManager.fetchLittlePlaylist()
-
                 if (updatedSubList.size != 6){
                     updatedSubList = updatedSubList.subList(0,6)
                 }
@@ -84,25 +89,24 @@ class PlayerActivity : AppCompatActivity() {
                     else {
                         newEntry = true
                     }
-
                     //COMPARISON PART OVER
-
                     val updatedSublistWithImages = playlistManager.fetchLittlePlaylistWithImages()
                     println("update time")
                     runOnUiThread {
                         // replaces 7 most recent entries with updated order
                         if (editPlaylist) {
                             println("only an edit in the playlist")
-                            playlistDetailsList.subList(0, 6).clear()
-                            playlistDetailsList.addAll(0, (updatedSublistWithImages.subList(0, 6)))
-                            recyclerView.adapter?.notifyItemRangeChanged(0, 6)
+                            playlistDetailsList.subList(UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE).clear()
+                            playlistDetailsList.addAll(0, (updatedSublistWithImages.subList(
+                                UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE)))
+                            recyclerView.adapter?.notifyItemRangeChanged(UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE)
                         }
                         // adds new entry to the playlist
                         else if (newEntry) {
                             println("addition to the playlist")
-                            //val rangeToRemove = minOf(5, playlistDetailsList.size)
-                            playlistDetailsList.subList(0, 5).clear()
-                            playlistDetailsList.addAll(0, updatedSublistWithImages.subList(0, 6))
+                            playlistDetailsList.subList(UPDATE_LOWER_VALUE, NEW_ENTRY_UPDATE_UPPER_VALUE).clear()
+                            playlistDetailsList.addAll(0, updatedSublistWithImages.subList(
+                                UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE))
                             recyclerView.adapter?.notifyDataSetChanged()
                         }
                     }
@@ -198,57 +202,27 @@ class PlayerActivity : AppCompatActivity() {
     private fun toggleAudio() {
         // handles extra, unnecessary clicks of button
         if (loadingIndicator.visibility == View.VISIBLE) {
+            println("things are loading. try again later")
             return
         }
-        //stops and releases player if it is playing
-        if (mediaPlayer?.isPlaying == true) {
-            mediaPlayer?.stop()
-            mediaPlayer?.reset()
-            mediaPlayer?.release()
-            mediaPlayer = null
+        if (AudioPlaybackService.isPlaying) {
+            // if audio is playing, stops the stream
+            println("COULD TELL AUDIO IS PLAYING")
+            loadingIndicator.visibility = View.VISIBLE
+            stopService(Intent(this, AudioPlaybackService::class.java))
             Toast.makeText(this, "Audio has been stopped", Toast.LENGTH_LONG).show()
+            loadingIndicator.visibility = View.GONE // Hide the loading indicator
         } else {
-            playRadio()
+            // starts the radio stream
+            println("said audio isnt playing")
+            loadingIndicator.visibility = View.VISIBLE
+            startService(Intent(this, AudioPlaybackService::class.java))
+            loadingIndicator.visibility = View.GONE // Hide the loading indicator
         }
+
     }
 
 
-    // plays the stream of the radi
-    private fun playRadio() {
-        val wxycURL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
-        loadingIndicator.visibility = View.VISIBLE
-        //media player created and initialized
-        mediaPlayer = MediaPlayer().apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            setDataSource(wxycURL)
-            //set to handle event when audio is prepared
-            setOnPreparedListener { mp ->
-                mp.start()
-                loadingIndicator.visibility = View.GONE // Hide the loading indicator
-                Toast.makeText(applicationContext, "Audio started playing", Toast.LENGTH_LONG)
-                    .show()
-            }
-            //initiates prep process
-            prepareAsync()
-        }
-    }
-
-
-    // ensures it releases the mediaPlayer when app is closed?
-    override fun onStop() {
-        super.onStop()
-        releaseMediaPlayer()
-    }
-
-    private fun releaseMediaPlayer() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-    }
 
 }
 

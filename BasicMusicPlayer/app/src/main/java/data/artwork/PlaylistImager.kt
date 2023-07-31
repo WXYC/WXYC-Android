@@ -14,8 +14,19 @@ import data.artwork.lastfm.LastFmResults
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
+// declare constants
+private const val VARIOUS_ARTISTS = "v/a"
+private const val VARIOUS_ARTISTS_FULL = "various artists"
+private const val DISCOGS_API_KEY = "tYvsaskeJxOQbWoZSSkh"
+private const val DISCOGS_SECRET_KEY = "vZuPZFFDerXIPrBfSNnNyDhXjpIUiyXi"
+private const val LASTFM_METHOD = "album.getinfo"
+private const val LASTFM_API_KEY = "45f85235ffc46cbb8769d545c8059399"
+
+
+
 // fetches playlist image data. NEED TO CONCEAL THE KEY
 class PlaylistImager {
+
 
     // fetches the image urls for given playlist using asynch tasks
     suspend fun fetchPlaylistImages(playlist: MutableList<PlaylistDetails>): Unit =
@@ -74,8 +85,8 @@ class PlaylistImager {
             val response = DiscogsArtFetcher.discogsService.getImage(
                 artist,
                 release,
-                "tYvsaskeJxOQbWoZSSkh",
-                "vZuPZFFDerXIPrBfSNnNyDhXjpIUiyXi"
+                DISCOGS_API_KEY,
+                DISCOGS_SECRET_KEY
             )
             if (response.isSuccessful) {
                 val responseBody = response.body()
@@ -158,7 +169,7 @@ class PlaylistImager {
                 release = playcut.playcut.artistName
             }
             val response = LastFmArtFetcher.lastFmService.getAlbumInfo(
-                 "album.getinfo", "45f85235ffc46cbb8769d545c8059399", artist,
+                 LASTFM_METHOD, LASTFM_API_KEY, artist,
                 release, "json"
             )
             if (response.isSuccessful) {
@@ -188,15 +199,18 @@ class PlaylistImager {
 
     // fetches the artist image url from discogs
     suspend fun fetchDiscogsArtistImage(playcut: PlaylistDetails): String? {
+        val variousArtists = "Various Artists"
+
         try {
-            val artist = playcut.playcut.artistName
-            if (artist.equals("v/a", ignoreCase = true) || artist.equals("various artists", ignoreCase = true)){
-                return null
+            var artist = playcut.playcut.artistName
+            if (artist.equals(VARIOUS_ARTISTS, ignoreCase = true) || artist.equals(
+                    VARIOUS_ARTISTS_FULL, ignoreCase = true)){
+                 artist = variousArtists
             }
             val response = DiscogsArtFetcher.discogsService.getArtist(
                 artist,
-                "tYvsaskeJxOQbWoZSSkh",
-                "vZuPZFFDerXIPrBfSNnNyDhXjpIUiyXi"
+                DISCOGS_API_KEY,
+                DISCOGS_SECRET_KEY
             )
 
             if (response.isSuccessful) {
