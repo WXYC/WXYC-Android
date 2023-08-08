@@ -10,5 +10,4 @@ interface ITunesAPI {
     suspend fun getImage(
         @Query("term") term: String
     ): Response<ResponseBody>
-
 }

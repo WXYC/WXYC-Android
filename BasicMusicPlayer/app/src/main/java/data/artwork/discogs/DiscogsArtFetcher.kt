@@ -8,6 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object DiscogsArtFetcher {
     private const val BASE_URL = "https://api.discogs.com/"
 
+    // makes okhttp http request with api authorization (low-level)
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val originalRequest = chain.request()
@@ -18,6 +19,7 @@ object DiscogsArtFetcher {
         }
         .build()
 
+    // makes retrofit http request (high-level)
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)

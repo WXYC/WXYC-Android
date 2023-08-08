@@ -13,9 +13,11 @@ import java.net.URL
 object ItunesArtFetcher {
     private const val BASE_URL = "https://itunes.apple.com/"
 
+    // makes okhttp http request (low level)
     private val okHttpClient = OkHttpClient.Builder()
         .build()
 
+    // makes retrofit http request (high level)
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
@@ -23,6 +25,4 @@ object ItunesArtFetcher {
         .build()
 
     val iTunesService: ITunesAPI = retrofit.create(ITunesAPI::class.java)
-
-
 }

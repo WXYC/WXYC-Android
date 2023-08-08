@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.basicmusicplayer.R
@@ -17,12 +18,10 @@ import java.util.*
 class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
     RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder>() {
 
-
     // optimizes list
     init {
         setHasStableIds(true)
     }
-
 
     //called by recyclerview when its time to create a new viewholder
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlaylistViewHolder {
@@ -31,7 +30,6 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
             R.layout.song_item,
             parent, false
         )
-
         return PlaylistViewHolder(itemView)
     }
 
@@ -61,27 +59,22 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
             holder.entryTypesTextView.text = convertedTime
         } else {
             //fills data
-            holder.imageView.setImageResource(R.drawable.wxyc_slash_logo)
-            holder.imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            holder.imageView.setImageResource(R.drawable.wxyc_placeholder)
+            holder.imageView.scaleType = ImageView.ScaleType.CENTER_CROP
             holder.songName.text = currentItem.playcut.songTitle
             holder.artistName.text = currentItem.playcut.artistName
 
             //check if there is an image url for the song
-            if (!currentItem.playcut.imageURL.isNullOrEmpty()){
-                holder.imageView.scaleType = ImageView.ScaleType.CENTER
+            if (!currentItem.playcut.imageURL.isNullOrEmpty()) {
                 currentItem.playcut.imageURL?.let { url ->
                     imageLoader.loadImage(holder.imageView, url)
+                    holder.imageView.scaleType = ImageView.ScaleType.CENTER
                 }
             }
-
-
-
         }
     }
 
     override fun getItemCount() = playlistData.size
-
-
     // view holder represents recyclerview elements
     class PlaylistViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.image_view)
@@ -109,8 +102,6 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
     override fun getItemViewType(position: Int): Int {
         return position
     }
-
-
 }
 
 

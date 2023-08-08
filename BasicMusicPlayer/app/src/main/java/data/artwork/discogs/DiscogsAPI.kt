@@ -21,6 +21,4 @@ interface DiscogsAPI {
         @Query("key") key: String,
         @Query("secret") secret: String
     ): Response<ResponseBody>
-
-
 }

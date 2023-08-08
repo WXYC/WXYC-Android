@@ -10,18 +10,9 @@ import com.example.basicmusicplayer.R
 
 // class to load the image url
 class ImageLoader {
-
     fun loadImage(imageView: ImageView, imageUrl: String) {
-
-        val placeholderImage = AppCompatResources.getDrawable(imageView.context, R.drawable.wxyc_slash_logo)
-
-       /* placeholderImage?.let {
-            it.setTint(ContextCompat.getColor(imageView.context, android.R.color.transparent))
-            it.setBounds(0, 0, it.intrinsicWidth, it.intrinsicHeight)
-        }
-
-        */
-
+        val placeholderImage =
+            AppCompatResources.getDrawable(imageView.context, R.drawable.wxyc_placeholder)
         Glide.with(imageView.context)
             .load(imageUrl)
             .diskCacheStrategy(DiskCacheStrategy.ALL) // Cache the image

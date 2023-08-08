@@ -23,27 +23,23 @@ private const val LASTFM_METHOD = "album.getinfo"
 private const val LASTFM_API_KEY = "45f85235ffc46cbb8769d545c8059399"
 
 
-
 // fetches playlist image data. NEED TO CONCEAL THE KEY
 class PlaylistImager {
-
-
     // fetches the image urls for given playlist using asynch tasks
     suspend fun fetchPlaylistImages(playlist: MutableList<PlaylistDetails>): Unit =
         coroutineScope {
             val deferred = async {
                 for (i in playlist.indices) {
                     // make sure it is a playcut
-                    if (playlist[i].entryType != "playcut"){
+                    if (playlist[i].entryType != "playcut") {
                         continue
                     }
                     // Try fetching from lastfm
                     val lastFmURL = fetchLastFmImage(playlist[i])
-                    if (lastFmURL != null){
+                    if (lastFmURL != null) {
                         playlist[i].playcut.imageURL = lastFmURL
                         continue // Move on to the next iteration, no need to check Discogs/iTunes
                     }
-
                     // if lastfm null try iTunes
                     val itunesURL = fetchItunesImage(playlist[i])
                     if (itunesURL != null) {
@@ -51,37 +47,33 @@ class PlaylistImager {
                         println("itunes saved the day")
                         continue
                     }
-
                     // if lastfm and itunes null try discogs
                     val discogsURL = fetchDiscogsImage(playlist[i])
                     if (discogsURL != null) {
                         playlist[i].playcut.imageURL = discogsURL
                         continue
                     }
-
                     // if all release searches fail, use artist image
                     val artistUrl = fetchDiscogsArtistImage(playlist[i])
-                    if (artistUrl != null){
+                    if (artistUrl != null) {
                         playlist[i].playcut.imageURL = artistUrl
                         println("artist image filled in")
                         continue
                     }
-
                     println("All fetchers are null for " + playlist[i].playcut)
                 }
             }
             return@coroutineScope deferred
         }.await()
 
-
     // fetches the image url from discogs
     suspend fun fetchDiscogsImage(playcut: PlaylistDetails): String? {
         try {
             val artist = playcut.playcut.artistName
             var release = playcut.playcut.releaseTitle
-            if (release.equals("s/t", ignoreCase = true)){
+            if (release.equals("s/t", ignoreCase = true)) {
                 release = playcut.playcut.artistName
-                }
+            }
             val response = DiscogsArtFetcher.discogsService.getImage(
                 artist,
                 release,
@@ -100,7 +92,7 @@ class PlaylistImager {
                             break
                         }
                     }
-                    if (imageUrl == ""){
+                    if (imageUrl == "") {
                         return null
                     }
                     if (imageUrl != null) {
@@ -125,7 +117,7 @@ class PlaylistImager {
         try {
             val artist = playcut.playcut.artistName
             var release = playcut.playcut.releaseTitle
-            if (release.equals("s/t", ignoreCase = true)){
+            if (release.equals("s/t", ignoreCase = true)) {
                 release = playcut.playcut.artistName
             }
             val itunesSearch = "$artist $release"
@@ -138,7 +130,7 @@ class PlaylistImager {
                     val itunesJson = responseBody.string()
                     val searchResult = Gson().fromJson(itunesJson, ITunesResults::class.java)
                     val imageUrl = searchResult.results.firstOrNull()?.artworkUrl100
-                    if (imageUrl == ""){
+                    if (imageUrl == "") {
                         return null
                     }
                     val imageUrlMaxSize = imageUrl?.replace("100x100bb", "1200x1200")
@@ -153,8 +145,7 @@ class PlaylistImager {
                 // Handle the error response
                 println("itunes art fetcher failed")
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             // Handle network or other exceptions
         }
         return null
@@ -165,11 +156,11 @@ class PlaylistImager {
         try {
             val artist = playcut.playcut.artistName
             var release = playcut.playcut.releaseTitle
-            if (release.equals("s/t", ignoreCase = true)){
+            if (release.equals("s/t", ignoreCase = true)) {
                 release = playcut.playcut.artistName
             }
             val response = LastFmArtFetcher.lastFmService.getAlbumInfo(
-                 LASTFM_METHOD, LASTFM_API_KEY, artist,
+                LASTFM_METHOD, LASTFM_API_KEY, artist,
                 release, "json"
             )
             if (response.isSuccessful) {
@@ -179,7 +170,7 @@ class PlaylistImager {
                     val cleanedJson = lastfmJson.replace("\\/", "/")
                     val searchResult = Gson().fromJson(cleanedJson, LastFmResults::class.java)
                     val imageUrl = searchResult.album.image[4].text
-                    if (imageUrl == ""){
+                    if (imageUrl == "") {
                         return null
                     }
                     if (imageUrl != null) {
@@ -190,8 +181,7 @@ class PlaylistImager {
                 // Handle the error response
                 println("LASTFM art fetcher failed")
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             // Handle network or other exceptions
         }
         return null
@@ -200,27 +190,28 @@ class PlaylistImager {
     // fetches the artist image url from discogs
     suspend fun fetchDiscogsArtistImage(playcut: PlaylistDetails): String? {
         val variousArtists = "Various Artists"
-
         try {
             var artist = playcut.playcut.artistName
             if (artist.equals(VARIOUS_ARTISTS, ignoreCase = true) || artist.equals(
-                    VARIOUS_ARTISTS_FULL, ignoreCase = true)){
-                 artist = variousArtists
+                    VARIOUS_ARTISTS_FULL, ignoreCase = true
+                )
+            ) {
+                artist = variousArtists
             }
             val response = DiscogsArtFetcher.discogsService.getArtist(
                 artist,
                 DISCOGS_API_KEY,
                 DISCOGS_SECRET_KEY
             )
-
             if (response.isSuccessful) {
                 //println("FETCH IMAGE CHECKPOINT 2")
                 val responseBody = response.body()
                 if (responseBody != null) {
                     val discogsJson = responseBody.string()
-                    val searchResult = Gson().fromJson(discogsJson, DiscogsArtistsResults::class.java)
+                    val searchResult =
+                        Gson().fromJson(discogsJson, DiscogsArtistsResults::class.java)
                     val imageUrl = searchResult.results.firstOrNull()?.cover_image
-                    if (imageUrl?.endsWith(".gif") == true){
+                    if (imageUrl?.endsWith(".gif") == true) {
                         return null
                     }
                     if (imageUrl != null) {
@@ -228,7 +219,6 @@ class PlaylistImager {
                     } else {
                         println("discogs no artist url")
                     }
-
                 } else {
                     // Handle empty response body
                     println("empty image data")

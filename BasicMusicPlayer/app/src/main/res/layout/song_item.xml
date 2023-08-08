@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="8dp">
 
-
+    <!-- cardview for entry item -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardView"
         android:layout_width="match_parent"
@@ -14,12 +14,12 @@
         android:layout_margin="4dp">
 
         <!-- playcut content -->
-
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp">
-
+            android:padding="8dp"
+            android:background="@color/black">
+            <!-- album image -->
             <ImageView
                 android:id="@+id/image_view"
                 android:layout_width="300dp"
@@ -29,16 +29,18 @@
                 android:layout_marginEnd="8dp"
                 android:src="@drawable/music_note" />
 
+            <!-- song name -->
             <TextView
                 android:id="@+id/song_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/image_view"
-                android:text="Line 1"
+                android:text="Song Name"
+                android:textColor="@color/softWhite"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-
+            <!-- artist name -->
             <TextView
                 android:id="@+id/artist_name"
                 android:layout_width="wrap_content"
@@ -47,8 +49,8 @@
                 android:layout_alignStart="@id/song_name"
                 android:layout_marginTop="4dp"
                 android:layout_toEndOf="@+id/image_view"
-                android:text="line 2" />
-
+                android:text="Artist Name"
+                android:textColor="@color/softWhite" />
 
         </RelativeLayout>
 

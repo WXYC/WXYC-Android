@@ -1,7 +1,9 @@
 package data.artwork.discogs
 
-data class DiscogsArtistsResults(val pagination: Pagination,
-                                 val results: List<Result>
+// data class for handling discogs artist search results
+data class DiscogsArtistsResults(
+    val pagination: Pagination,
+    val results: List<Result>
 )
 
 data class Pagination(

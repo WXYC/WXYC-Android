@@ -2,6 +2,7 @@ package data
 
 import com.google.gson.annotations.SerializedName
 
+// data class for handling discogs release search results
 data class Pagination(
     val page: Int,
     val pages: Int,
