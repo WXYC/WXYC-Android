@@ -28,7 +28,7 @@ class PlaylistManager {
             jsonImporter.fillFullPlaylist(detailsCallback)
             // Wait for the callback to complete
             latch.await()
-            playlistImager.fetchPlaylistImages(playlist)
+            playlistImager.fetchPlaylistImageURLs(playlist)
             return@withContext playlist
         }
     }
@@ -78,7 +78,7 @@ class PlaylistManager {
             jsonImporter.fillLittlePlaylist(detailsCallback)
             // Wait for the callback to complete
             latch.await()
-            playlistImager.fetchPlaylistImages(playlist)
+            playlistImager.fetchPlaylistImageURLs(playlist)
             return@withContext playlist
         }
     }

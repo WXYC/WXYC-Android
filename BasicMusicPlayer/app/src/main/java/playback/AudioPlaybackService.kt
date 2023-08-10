@@ -2,20 +2,24 @@ package playback
 
 
 import android.app.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import com.example.basicmusicplayer.PlayerActivity
 import com.example.basicmusicplayer.R
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
-import android.view.View
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 // class that handles playback of radio
 class AudioPlaybackService : Service() {
@@ -24,11 +28,15 @@ class AudioPlaybackService : Service() {
     companion object {
         var isPlaying: Boolean = false
         var isPreparing: Boolean = false
+        var isMuted: Boolean = false
+        var hasConnection: Boolean = true
     }
     //declares class properties for managing audio focus, attributes, and the media player
     private lateinit var audioManager: AudioManager
     private lateinit var audioFocusRequest: AudioFocusRequest
     private lateinit var audioAttributes: AudioAttributes
+    private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var broadcastReceiver: BroadcastReceiver
     private var mediaPlayer: MediaPlayer? = null
 
     // method is called when the service is created. sets up audio and initiates radio playback
@@ -36,6 +44,7 @@ class AudioPlaybackService : Service() {
     override fun onCreate() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "AudioPlaybackChannel"
             val channel = NotificationChannel(
@@ -57,8 +66,19 @@ class AudioPlaybackService : Service() {
                 .setOnAudioFocusChangeListener(afChangeListener)
                 .build()
         }
-        playRadio()
+
+        // Register network connectivity receiver
+        setUpConnectionLossReceiver()
+
     }
+
+    // function to see if app is connected to network
+    private fun isNetworkConnected(): Boolean {
+        val network = connectivityManager.activeNetwork
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        return capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+
 
     // initializes the media player
     @RequiresApi(Build.VERSION_CODES.O)
@@ -73,9 +93,8 @@ class AudioPlaybackService : Service() {
             setOnPreparedListener { mp ->
                 mp.start()
                 Companion.isPlaying = true
+                println("STARTED RADIO FROM SCRATCH")
                 isPreparing = false
-                Toast.makeText(applicationContext, "Audio started playing", Toast.LENGTH_LONG)
-                    .show()
             }
             // Set up the error listener to handle any errors during media preparation
             setOnErrorListener { mp, what, extra ->
@@ -92,7 +111,30 @@ class AudioPlaybackService : Service() {
         }
     }
     //called when service begins. creates notification that service is running
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!isNetworkConnected()) {
+            println("there was no network to begin with")
+            // Handle loss of network connectivity when starting the service
+            Toast.makeText(this, "No Network Connection", Toast.LENGTH_SHORT).show()
+            setInactiveImagesInPlayerActivity()
+            stopSelf() // Stop the service if there's no network
+            return START_NOT_STICKY
+        }
+        if (intent != null) {
+            val action = intent.getStringExtra("action")
+            if (action != null) {
+                when (action) {
+                    "mute" -> muteAudio()
+                    "unmute" -> unmuteAudio()
+                    "startUnmuted" -> playRadio()
+                }
+            }
+            else if (mediaPlayer == null){
+                playMutedRadio()
+            }
+        }
+
         val notification = createNotification()
         startForeground(1, notification)
         return START_STICKY
@@ -101,15 +143,18 @@ class AudioPlaybackService : Service() {
     // ends the radio stream when audio is toggled
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
-        mediaPlayer?.run {
+        println("made it to on destroy")
+        mediaPlayer?.apply {
             setOnPreparedListener(null)
             setOnErrorListener(null)
             stop()
+            reset()
             release()
-            mediaPlayer = null
         }
-        isPlaying = false // Set isPlaying to false when audio playback is paused
+        mediaPlayer = null
+        isPlaying = false // Set isPlaying to false when audio playback is destroyed
         audioManager.abandonAudioFocusRequest(audioFocusRequest)
+        unregisterReceiver(broadcastReceiver)
         super.onDestroy()
     }
 
@@ -150,35 +195,98 @@ class AudioPlaybackService : Service() {
 
     // releases media player
     private fun releaseMediaPlayer() {
-        mediaPlayer?.release()
+        println("released media player")
+        setInactiveImagesInPlayerActivity()
+        mediaPlayer?.apply {
+            setOnPreparedListener(null)
+            setOnErrorListener(null)
+            stop()
+            reset()
+            release()
+        }
         mediaPlayer = null
+        isPlaying = false // Set isPlaying to false when audio playback is destroyed
     }
 
     // used to monitor changes in audio focus state and adjust behavior accordingly
+    @RequiresApi(Build.VERSION_CODES.O)
     private val afChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             // when app has lost long-term audio focus (another app or system is taking over audio)
             AudioManager.AUDIOFOCUS_LOSS -> {
+                println("full loss")
                 // Release media player and stop playback
-                mediaPlayer?.run {
-                    stop()
-                    release()
-                    mediaPlayer = null
-                }
+                setInactiveImagesInPlayerActivity()
+                onDestroy()
                 isPlaying = false
             }
             // temporary lost audio focus ex. phone call / notification
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                println("temporary loss")
                 // Pause playback temporarily
                 mediaPlayer?.pause()
                 isPlaying = false
             }
             // app regains audio focus
             AudioManager.AUDIOFOCUS_GAIN -> {
+                println("regained")
                 // Resume playback
                 mediaPlayer?.start()
                 isPlaying = true
             }
         }
+    }
+
+    private fun setActiveImagesInPlayerActivity() {
+        val intent = Intent("UpdateImagesIntent").apply {
+            putExtra("command", "setActive")
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    private fun setInactiveImagesInPlayerActivity() {
+        val intent = Intent("UpdateImagesIntent").apply {
+            putExtra("command", "setInactive")
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    fun muteAudio() {
+        println("made it to mute")
+        mediaPlayer?.setVolume(0f, 0f)
+        isMuted = true
+    }
+
+    fun unmuteAudio() {
+        println("made it to unmute")
+        mediaPlayer?.setVolume(1f, 1f)
+        isMuted = false
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun playMutedRadio(){
+        playRadio()
+        muteAudio()
+        isMuted = true
+
+    }
+
+    private fun setUpConnectionLossReceiver(){
+        broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (!isNetworkConnected()) {
+                    // Handle loss of network connectivity while playing
+                    Toast.makeText(context, "Network connection lost", Toast.LENGTH_SHORT).show()
+                    releaseMediaPlayer()
+                    hasConnection = false
+                }
+                else {
+                    println("there is a connection")
+                    hasConnection = true
+                }
+            }
+        }
+        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+        registerReceiver(broadcastReceiver, filter)
     }
 }

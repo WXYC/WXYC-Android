@@ -1,26 +1,20 @@
 package com.example.basicmusicplayer
 
 
-import android.app.appsearch.SearchResult
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.media.MediaPlayer
-import android.media.AudioAttributes
 import android.view.View
 import android.widget.*
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
 import data.*
 import kotlinx.coroutines.launch
-
-import com.bumptech.glide.Glide
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Runnable
 import playback.AudioPlaybackService
 import java.util.concurrent.*
@@ -37,11 +31,13 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var loadingView: View
     private lateinit var streamImage: ImageView
+    private lateinit var imageUpdateReceiver: BroadcastReceiver
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var playlistManager = PlaylistManager()
     private val scope = CoroutineScope(Dispatchers.Main)
     private val viewManager = ViewManager()
     private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
+    private var muteCounter = 0
 
     // initializes the activity and sets the layout
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,14 +47,30 @@ class PlayerActivity : AppCompatActivity() {
 
         initializeActivity()
 
-        //refreshes the playlist every 30 seconds. will abstract this into its own function
+        // Register a BroadcastReceiver to update image resources
+        setUpImageUpdateReceiver()
+
         val playlistRefresh = updatePlaylist()
+        val muteStatus = checkMuteStatus()
+
+        //refreshes the playlist every 30 seconds
         executor.scheduleAtFixedRate(playlistRefresh, 20, 30, TimeUnit.SECONDS)
+        // checks to see if stream has been muted every minute. if stream has been muted for...
+        // 1 minute, it releases the player
+        executor.scheduleAtFixedRate(muteStatus, 30, 30, TimeUnit.SECONDS)
+
 
         // listens for button to be clicked
         btnPlayAudio.setOnClickListener {
             toggleAudio()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopService(Intent(this, AudioPlaybackService::class.java))
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(imageUpdateReceiver)
+        executor.shutdown()
     }
 
     private fun initializeActivity() {
@@ -69,6 +81,9 @@ class PlayerActivity : AppCompatActivity() {
         streamImage = findViewById(R.id.streamImage)
         btnPlayAudio = findViewById(R.id.toggleButton)
         showLoadingView()
+
+        startService(Intent(this, AudioPlaybackService::class.java))
+        setInactiveStream()
 
         //sets up initial playlist and then shows the playlist when ready
         scope.launch {
@@ -138,19 +153,48 @@ class PlayerActivity : AppCompatActivity() {
         if (AudioPlaybackService.isPreparing) {
             return
         }
-        if (AudioPlaybackService.isPlaying) {
-            // if audio is playing, stops the stream
-            stopService(Intent(this, AudioPlaybackService::class.java))
-            Toast.makeText(this, "Audio has been stopped", Toast.LENGTH_LONG).show()
-            streamImage.setImageResource(R.drawable.stream_inactive_short)
-            btnPlayAudio.setImageResource(R.drawable.play_button)
-        } else {
-            // starts the radio stream
-            startService(Intent(this, AudioPlaybackService::class.java))
-            streamImage.setImageResource(R.drawable.stream_active_short)
-            btnPlayAudio.setImageResource(R.drawable.pause_button)
+        // if audio stream is not running, we need to start the stream again
+        if (!AudioPlaybackService.isPlaying) {
+            println(" ODD CASE")
+            // case for stream is not playing but it appears to still be active, essentially resets things
+            if (!AudioPlaybackService.isMuted){
+                setInactiveStream()
+            }
+            // audio stream is not playing, but we want to start the stream again
+            else{
+                // starts the stream if there is internet connection
+                if (AudioPlaybackService.hasConnection) {
+                    val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
+                    audioServiceIntent.putExtra("action", "startUnmuted")
+                    startService(audioServiceIntent)
+                    setActiveStream()
+                    Toast.makeText(applicationContext, "Loading WXYC stream", Toast.LENGTH_LONG)
+                        .show()
+                }
+                // case where there is no internet
+                else {
+                    Toast.makeText(applicationContext, "No Internet Connection", Toast.LENGTH_LONG)
+                        .show()
+                }
+            }
         }
-
+        // stream is running but just muted (paused) or unmuted (playing)
+        else {
+            // audio is "playing", so we pause "mute" the stream
+            if (!AudioPlaybackService.isMuted) {
+                val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
+                audioServiceIntent.putExtra("action", "mute")
+                startService(audioServiceIntent)
+                setInactiveStream()
+            }
+            // audio is "paused", so we play "unmute" the stream
+            else {
+                val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
+                audioServiceIntent.putExtra("action", "unmute")
+                startService(audioServiceIntent)
+                setActiveStream()
+            }
+        }
     }
 
     // updates the playlist
@@ -161,22 +205,23 @@ class PlayerActivity : AppCompatActivity() {
     private fun updatePlaylist(): Runnable {
         return Runnable {
             scope.launch {
+                // fetches last 7 updated playlist values
+                var updatedSubList = playlistManager.fetchLittlePlaylist()
+                // bool value to keep track of update type
+                var newEntry = false
+
                 // if there is no current playlist, skip this iteration of the updates
                 if (playlistDetailsList.size < UPDATE_UPPER_VALUE) {
                     println("playlist is not ready")
                     initializeActivity()
                     return@launch
                 }
+                if (updatedSubList.isNullOrEmpty()) {
+                    return@launch
+                }
 
                 // this section compares the first 7 entries of the current list and an updated list
                 // if there are differences the first 7 entries will be updated
-
-                // fetches last 7 updated playlist values
-                var updatedSubList = playlistManager.fetchLittlePlaylist()
-                if (updatedSubList.isNullOrEmpty()) {
-                    // switch to null or empty
-                    return@launch
-                }
                 if (updatedSubList.size != UPDATE_UPPER_VALUE) {
                     updatedSubList = updatedSubList.subList(0, UPDATE_UPPER_VALUE)
                 }
@@ -184,70 +229,108 @@ class PlayerActivity : AppCompatActivity() {
                 // fetches last 7 current playlist values
                 val currentSubList = playlistDetailsList.subList(0, UPDATE_UPPER_VALUE)
 
-                // bool values to keep track of update type
-                var editPlaylist = false
-                var newEntry = false
-
                 //  checks if the lists are the same
                 if (!compareLists(updatedSubList, currentSubList)) {
                     // this determined if the two sublists are different.  now we need to check if
                     // an entry was added or there was an edit to the playlist (with no added entry)
 
                     // checks if the content in the lists are the same i.e. just an edit in order
-                    if (compareListContent(updatedSubList, currentSubList)) {
-                        editPlaylist = true
-                    }
-                    // new entry
-                    else {
-                        newEntry = true
-                    }
+                    newEntry = !compareListContent(updatedSubList, currentSubList)
                     //COMPARISON PART OVER
-
-                    // now that we know there is an update, we fetch the new entries with their art
-                    val updatedSublistWithImages = playlistManager.fetchLittlePlaylistWithImages()
-                    println("update time")
-                    runOnUiThread {
-                        // replaces 7 most recent entries with updated order
-                        if (editPlaylist) {
-                            println("only an edit in the playlist")
-                            //clears the last 7 entries of the current playlist
-                            playlistDetailsList.subList(UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE)
-                                .clear()
-                            //adds the updated, edited 7 entries to the playlist (no new entry)
-                            playlistDetailsList.addAll(
-                                0, (updatedSublistWithImages.subList(
-                                    UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE
-                                ))
-                            )
-                            // notifies the adapter that the first 7 values have changed
-                            recyclerView.adapter?.notifyItemRangeChanged(
-                                UPDATE_LOWER_VALUE,
-                                UPDATE_UPPER_VALUE
-                            )
-                        }
-                        // adds new entry to the playlist
-                        else if (newEntry) {
-                            println("addition to the playlist")
-                            // clears the last 6 values in the list
-                            playlistDetailsList.subList(
-                                UPDATE_LOWER_VALUE,
-                                NEW_ENTRY_UPDATE_UPPER_VALUE
-                            ).clear()
-                            // adds the updated 7 values to the list (with new entry)
-                            playlistDetailsList.addAll(
-                                0, updatedSublistWithImages.subList(
-                                    UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE
-                                )
-                            )
-                            // notifies entire dataset has changed
-                            recyclerView.adapter?.notifyDataSetChanged()
-                        }
-                    }
+                    fetchUpdatedPlaylistEntries(newEntry)
                 } else {
                     println("no update")
                 }
             }
         }
+    }
+
+    private suspend fun fetchUpdatedPlaylistEntries(newEntry: Boolean) {
+        val updatedSublistWithImages = playlistManager.fetchLittlePlaylistWithImages()
+        println("update time")
+        runOnUiThread {
+            // replaces 7 most recent entries with updated order
+            if (!newEntry) {
+                println("only an edit in the playlist")
+                //clears the last 7 entries of the current playlist
+                playlistDetailsList.subList(UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE)
+                    .clear()
+                //adds the updated, edited 7 entries to the playlist (no new entry)
+                playlistDetailsList.addAll(
+                    0, (updatedSublistWithImages.subList(
+                        UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE
+                    ))
+                )
+                // notifies the adapter that the first 7 values have changed
+                recyclerView.adapter?.notifyItemRangeChanged(
+                    UPDATE_LOWER_VALUE,
+                    UPDATE_UPPER_VALUE
+                )
+            }
+            // adds new entry to the playlist
+            else if (newEntry) {
+                println("addition to the playlist")
+                // clears the last 6 values in the list
+                playlistDetailsList.subList(
+                    UPDATE_LOWER_VALUE,
+                    NEW_ENTRY_UPDATE_UPPER_VALUE
+                ).clear()
+                // adds the updated 7 values to the list (with new entry)
+                playlistDetailsList.addAll(
+                    0, updatedSublistWithImages.subList(
+                        UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE
+                    )
+                )
+                // notifies entire dataset has changed
+                recyclerView.adapter?.notifyDataSetChanged()
+            }
+        }
+    }
+
+    // function to release audio if the stream has been muted/paused for an extended amount of time
+    private fun checkMuteStatus(): Runnable {
+        return Runnable {
+            if (AudioPlaybackService.isPlaying){
+                if (AudioPlaybackService.isMuted){
+                    muteCounter += 1
+                }
+                if (muteCounter == 2){
+                    muteCounter = 0
+                    stopService(Intent(this, AudioPlaybackService::class.java))
+                }
+            }
+        }
+    }
+
+    // receiver for updates from AudioPlaybackService regarding stream images
+    private fun setUpImageUpdateReceiver() {
+        imageUpdateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val command = intent?.getStringExtra("command")
+                if (command == "setInactive") {
+                    setInactiveStream()
+                }
+                if (command == "setActive") {
+                    setActiveStream()
+                }
+            }
+        }
+        val intentFilter = IntentFilter("UpdateImagesIntent")
+        LocalBroadcastManager.getInstance(this).registerReceiver(imageUpdateReceiver, intentFilter)
+    }
+
+    // sets active stream images
+    private fun setActiveStream() {
+        streamImage.setImageResource(R.drawable.stream_active_short)
+        btnPlayAudio.setImageResource(R.drawable.pause_button)
+        AudioPlaybackService.isMuted = false
+    }
+
+    // sets inactive stream images
+    private fun setInactiveStream() {
+        streamImage.setImageResource(R.drawable.stream_inactive_short)
+        btnPlayAudio.setImageResource(R.drawable.play_button)
+        AudioPlaybackService.isMuted = true
     }
 }
 
