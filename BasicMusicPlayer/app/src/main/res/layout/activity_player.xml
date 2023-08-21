@@ -4,36 +4,45 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context=".PlayerActivity">
 
-    <!-- toggle button -->
-    <Button
-        android:id="@+id/btnPlayAudio"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:text="Play/pause wxyc" />
+    <!-- toggle audio button -->
+    <ImageButton
+        android:id="@+id/toggleButton"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_below="@+id/wxycLogo"
+        android:scaleType="centerCrop"
+        android:src="@drawable/play_button"
+        android:background="@color/black" />
 
-    <!-- loading indicator -->
-    <ProgressBar
-        android:id="@+id/loading_indicator"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentTop="true"
-        android:visibility="visible" />
+    <!-- stream sound wace image -->
+    <ImageView
+       android:id="@+id/streamImage"
+       android:layout_width="275dp"
+       android:layout_height="70dp"
+       android:src="@drawable/stream_inactive_short"
+       android:layout_below="@+id/wxycLogo"
+       android:layout_toRightOf="@+id/toggleButton" />
 
-    <!-- include loading screen layout -->
+    <!-- wxyc logo at top of page -->
+    <ImageView
+       android:id="@+id/wxycLogo"
+       android:layout_width="150dp"
+       android:layout_height="125dp"
+       android:layout_centerHorizontal="true"
+       android:layout_marginEnd="8dp"
+       android:src="@drawable/wxyc_lowqual" />
+
     <include layout="@layout/loading_screen" />
-
 
     <!-- recyclerview for playlist -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/btnPlayAudio"
+        android:layout_below="@id/toggleButton"
         android:clipToPadding="false"
         android:padding="4dp"
         tools:listitem="@layout/song_item" />
