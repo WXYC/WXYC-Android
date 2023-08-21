@@ -7,7 +7,6 @@ import data.PlaylistDetails
 
 // Class to manage the views in the PlayerActivity
 class ViewManager {
-
     fun setupRecyclerView(
         recyclerView: RecyclerView,
         playlistDetailsList: MutableList<PlaylistDetails>
