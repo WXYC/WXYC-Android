@@ -17,6 +17,17 @@
         android:src="@drawable/play_button"
         android:background="@color/black" />
 
+    <!-- info screen button -->
+    <ImageButton
+        android:id="@+id/btnInfoScreen"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_below="@+id/wxycLogo"
+        android:layout_toRightOf="@id/streamImage"
+        android:background="@color/black"
+        android:scaleType="centerCrop"
+        android:src="@android:drawable/ic_menu_info_details" />
+
     <!-- stream sound wace image -->
     <ImageView
        android:id="@+id/streamImage"

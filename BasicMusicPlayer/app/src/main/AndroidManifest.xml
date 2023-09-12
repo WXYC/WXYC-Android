@@ -27,6 +27,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".InfoScreen"
+            android:screenOrientation="portrait">
+        </activity>
+
         <service
             android:name="playback.AudioPlaybackService"
             android:enabled="true"
