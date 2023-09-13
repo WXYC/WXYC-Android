@@ -32,6 +32,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingView: View
     private lateinit var streamImage: ImageView
     private lateinit var imageUpdateReceiver: BroadcastReceiver
+    private lateinit var btnInfoScreen: ImageButton
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var playlistManager = PlaylistManager()
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -64,6 +65,10 @@ class PlayerActivity : AppCompatActivity() {
         btnPlayAudio.setOnClickListener {
             toggleAudio()
         }
+
+        btnInfoScreen.setOnClickListener {
+            openInfoScreen()
+        }
     }
 
     override fun onDestroy() {
@@ -80,6 +85,8 @@ class PlayerActivity : AppCompatActivity() {
         // initialization of properties
         streamImage = findViewById(R.id.streamImage)
         btnPlayAudio = findViewById(R.id.toggleButton)
+        btnInfoScreen = findViewById(R.id.btnInfoScreen)
+
         showLoadingView()
 
         startService(Intent(this, AudioPlaybackService::class.java))
@@ -92,6 +99,7 @@ class PlayerActivity : AppCompatActivity() {
             showContentView()
         }
     }
+
 
     // checks if lists are the same
     private fun compareLists(
@@ -195,6 +203,11 @@ class PlayerActivity : AppCompatActivity() {
                 setActiveStream()
             }
         }
+    }
+
+    private fun openInfoScreen() {
+        val infoIntent = Intent(this,InfoScreen::class.java)
+        startActivity(infoIntent)
     }
 
     // updates the playlist
