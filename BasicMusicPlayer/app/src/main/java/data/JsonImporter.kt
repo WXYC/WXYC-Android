@@ -26,7 +26,6 @@ class JsonImporter {
         jsonFullURL.httpGet().responseString { _, _, result ->
             when (result) {
                 is Result.Success -> {
-                    println("jsonimporter Success")
                     val jsonString = result.value
                     // parse json string into an array
                     val jsonArray = JsonParser.parseString(jsonString).asJsonArray
@@ -41,10 +40,8 @@ class JsonImporter {
                     callback(playlistDetails) // invoke the callback with the populated list
                 }
                 is Result.Failure -> {
-                    println("jsonimporter FAILED")
                     val error = result.error
                     // Handle the error
-                    println("Error: $error")
                     callback(playlistDetails) // invoke the callback with the empty list or handle the error case separately
                 }
             }

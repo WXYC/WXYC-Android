@@ -19,6 +19,7 @@ import kotlinx.coroutines.Runnable
 import playback.AudioPlaybackService
 import java.util.concurrent.*
 
+
 // constants used for selecting the range of the playlist to update
 // these values are
 private const val UPDATE_UPPER_VALUE = 6
@@ -38,6 +39,7 @@ class PlayerActivity : AppCompatActivity() {
     private val viewManager = ViewManager()
     private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
     private var muteCounter = 0
+   // private lateinit var binding: ActivityPlayerBinding
 
     // initializes the activity and sets the layout
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,7 +101,6 @@ class PlayerActivity : AppCompatActivity() {
         listTwo: List<PlaylistDetails>
     ): Boolean {
         if (listOne.size != listTwo.size) {
-            println("list comparison: FALSE (different size lists)")
             return false
         }
         for (i in listOne.indices) {
@@ -118,9 +119,7 @@ class PlayerActivity : AppCompatActivity() {
         listTwo: List<PlaylistDetails>
     ): Boolean {
         val setOne = listOne.map { it.id }.toSet()
-        println(setOne)
         val setTwo = listTwo.map { it.id }.toSet()
-        println(setTwo)
         if (setOne != setTwo) {
             return false
         }
@@ -150,12 +149,14 @@ class PlayerActivity : AppCompatActivity() {
     // toggles the audio
     private fun toggleAudio() {
         // handles extra, unnecessary clicks of button
+        println("made it to toggle audio")
         if (AudioPlaybackService.isPreparing) {
+            println("said it was preparing")
             return
         }
         // if audio stream is not running, we need to start the stream again
         if (!AudioPlaybackService.isPlaying) {
-            println(" ODD CASE")
+            println("sensed it was not playing")
             // case for stream is not playing but it appears to still be active, essentially resets things
             if (!AudioPlaybackService.isMuted){
                 setInactiveStream()
@@ -180,8 +181,10 @@ class PlayerActivity : AppCompatActivity() {
         }
         // stream is running but just muted (paused) or unmuted (playing)
         else {
+            println("sensed it was muted")
             // audio is "playing", so we pause "mute" the stream
             if (!AudioPlaybackService.isMuted) {
+                println("made it to intent part")
                 val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
                 audioServiceIntent.putExtra("action", "mute")
                 startService(audioServiceIntent)
@@ -212,7 +215,6 @@ class PlayerActivity : AppCompatActivity() {
 
                 // if there is no current playlist, skip this iteration of the updates
                 if (playlistDetailsList.size < UPDATE_UPPER_VALUE) {
-                    println("playlist is not ready")
                     initializeActivity()
                     return@launch
                 }
@@ -251,7 +253,6 @@ class PlayerActivity : AppCompatActivity() {
         runOnUiThread {
             // replaces 7 most recent entries with updated order
             if (!newEntry) {
-                println("only an edit in the playlist")
                 //clears the last 7 entries of the current playlist
                 playlistDetailsList.subList(UPDATE_LOWER_VALUE, UPDATE_UPPER_VALUE)
                     .clear()
@@ -321,15 +322,15 @@ class PlayerActivity : AppCompatActivity() {
 
     // sets active stream images
     private fun setActiveStream() {
-        streamImage.setImageResource(R.drawable.stream_active_short)
+        streamImage.setImageResource(R.drawable.nobackground_active_stream)
         btnPlayAudio.setImageResource(R.drawable.pause_button)
         AudioPlaybackService.isMuted = false
     }
 
     // sets inactive stream images
     private fun setInactiveStream() {
-        streamImage.setImageResource(R.drawable.stream_inactive_short)
-        btnPlayAudio.setImageResource(R.drawable.play_button)
+        streamImage.setImageResource(R.drawable.nobackground_inactive_stream)
+        btnPlayAudio.setImageResource(R.drawable.ios_play_button)
         AudioPlaybackService.isMuted = true
     }
 }
