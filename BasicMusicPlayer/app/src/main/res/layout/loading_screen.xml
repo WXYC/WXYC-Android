@@ -3,27 +3,53 @@
     android:id="@+id/loading_screen"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black">
+    android:background="@drawable/background">
 
-    <!-- center wxyc logo for loading screen -->
-    <ImageView
-        android:id="@+id/loadingLogo"
-        android:layout_width="300dp"
-        android:layout_height="300dp"
-        android:scaleType="center"
-        android:layout_centerHorizontal="true"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="150dp"
-        android:src="@drawable/wxyc_lowqual" />
 
     <!-- progress bar -->
     <ProgressBar
         android:id="@+id/loading_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/loadingLogo"
         android:layout_centerInParent="true"
         android:indeterminate="true"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal" />
+
+
+
+<!--
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true">
+        
+        <ImageView
+            android:id="@+id/combined_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/cassette_left_arch"
+            android:layout_gravity="center"/>
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:src="@drawable/cassette_center"
+            />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:src="@drawable/cassette_right_arch" />
+
+
+
+    </FrameLayout>
+    -->
 
 </RelativeLayout>

@@ -1,71 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="8dp">
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- cardview for entry item -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_margin="4dp">
-
-        <!-- playcut content -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="8dp"
-            android:background="@color/black">
-            <!-- album image -->
-            <ImageView
-                android:id="@+id/image_view"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
-                android:scaleType="center"
-                android:layout_centerHorizontal="true"
-                android:layout_marginEnd="8dp"
-                android:src="@drawable/music_note" />
-
-            <!-- song name -->
-            <TextView
-                android:id="@+id/song_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/image_view"
-                android:text="Song Name"
-                android:textColor="@color/softWhite"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <!-- artist name -->
-            <TextView
-                android:id="@+id/artist_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/song_name"
-                android:layout_alignStart="@id/song_name"
-                android:layout_marginTop="4dp"
-                android:layout_toEndOf="@+id/image_view"
-                android:text="Artist Name"
-                android:textColor="@color/softWhite" />
-
-        </RelativeLayout>
-
-
-
-    </androidx.cardview.widget.CardView>
-
-    <!-- talkset/breakpoint text -->
-    <TextView
-        android:id="@+id/entryTypesTextView"
+    <LinearLayout xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="#999999"
-        android:padding="8dp"
-        android:visibility="gone" />
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="8dp">
 
-</LinearLayout>
+        <!-- cardview for entry item -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/pink"
+            app:cardBackgroundColor="@color/pink"
+            app:cardCornerRadius="6dp"
+            app:cardElevation="1dp">
+
+            <!-- playcut content -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:padding="0dp">
+                <!-- album image -->
+                <ImageView
+                    android:id="@+id/image_view"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    app:layout_constraintDimensionRatio="1:1"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginEnd="0dp"
+                    android:scaleType="center"
+                    android:src="@drawable/music_note" />
+
+                <!-- song name -->
+                <TextView
+                    android:id="@+id/song_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintTop_toBottomOf="@id/image_view"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="Song Name"
+                    android:textColor="@color/softWhite"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- artist name -->
+                <TextView
+                    android:id="@+id/artist_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:layout_constraintTop_toBottomOf="@id/song_name"
+                    android:layout_toEndOf="@+id/image_view"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="4dp"
+                    android:text="Artist Name"
+                    android:textColor="@color/softWhite" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- talkset/breakpoint text -->
+        <TextView
+            android:id="@+id/entryTypesTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textColor="@color/softWhite"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</layout>

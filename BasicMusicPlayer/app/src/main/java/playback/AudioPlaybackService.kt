@@ -4,8 +4,6 @@ package playback
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
-import com.example.basicmusicplayer.PlayerActivity
-import com.example.basicmusicplayer.R
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioAttributes
@@ -20,6 +18,8 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.example.basicmusicplayer.PlayerActivity
+import com.example.basicmusicplayer.R
 
 // class that handles playback of radio
 class AudioPlaybackService : Service() {
@@ -59,17 +59,9 @@ class AudioPlaybackService : Service() {
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build()
-
-            // Create an AudioFocusRequest
-            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(audioAttributes)
-                .setOnAudioFocusChangeListener(afChangeListener)
-                .build()
         }
-
         // Register network connectivity receiver
         setUpConnectionLossReceiver()
-
     }
 
     // function to see if app is connected to network
@@ -82,8 +74,8 @@ class AudioPlaybackService : Service() {
 
     // initializes the media player
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun playRadio() {
-        val wxycURL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
+    private fun initializeRadio() {
+        val wxycURL = "https://audio-mp3.ibiblio.org/wxyc.mp3"
         isPreparing = true
         //media player created and initialized
         mediaPlayer = MediaPlayer().apply {
@@ -93,7 +85,6 @@ class AudioPlaybackService : Service() {
             setOnPreparedListener { mp ->
                 mp.start()
                 Companion.isPlaying = true
-                println("STARTED RADIO FROM SCRATCH")
                 isPreparing = false
             }
             // Set up the error listener to handle any errors during media preparation
@@ -102,28 +93,35 @@ class AudioPlaybackService : Service() {
                 releaseMediaPlayer() // Release the media player if an error occurs
                 false
             }
-            val result = audioManager.requestAudioFocus(audioFocusRequest)
-            //initiates prep process
-            if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                // Start playback
-                prepareAsync()
-            }
+            prepareAsync()
         }
     }
     //called when service begins. creates notification that service is running
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!isNetworkConnected()) {
-            println("there was no network to begin with")
             // Handle loss of network connectivity when starting the service
             Toast.makeText(this, "No Network Connection", Toast.LENGTH_SHORT).show()
             setInactiveImagesInPlayerActivity()
             stopSelf() // Stop the service if there's no network
             return START_NOT_STICKY
         }
+
+        // audio focus if its not initalized
+        if (!::audioFocusRequest.isInitialized) {
+            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(audioAttributes)
+                .setOnAudioFocusChangeListener(afChangeListener)
+                .build()
+        }
+
+
+
+        // recieves intent
         if (intent != null) {
             val action = intent.getStringExtra("action")
             if (action != null) {
+                println("had action")
                 when (action) {
                     "mute" -> muteAudio()
                     "unmute" -> unmuteAudio()
@@ -134,7 +132,6 @@ class AudioPlaybackService : Service() {
                 playMutedRadio()
             }
         }
-
         val notification = createNotification()
         startForeground(1, notification)
         return START_STICKY
@@ -143,7 +140,6 @@ class AudioPlaybackService : Service() {
     // ends the radio stream when audio is toggled
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
-        println("made it to on destroy")
         mediaPlayer?.apply {
             setOnPreparedListener(null)
             setOnErrorListener(null)
@@ -153,7 +149,11 @@ class AudioPlaybackService : Service() {
         }
         mediaPlayer = null
         isPlaying = false // Set isPlaying to false when audio playback is destroyed
-        audioManager.abandonAudioFocusRequest(audioFocusRequest)
+
+        if (::audioFocusRequest.isInitialized) {
+            audioManager.abandonAudioFocusRequest(audioFocusRequest)
+        }
+
         unregisterReceiver(broadcastReceiver)
         super.onDestroy()
     }
@@ -195,7 +195,6 @@ class AudioPlaybackService : Service() {
 
     // releases media player
     private fun releaseMediaPlayer() {
-        println("released media player")
         setInactiveImagesInPlayerActivity()
         mediaPlayer?.apply {
             setOnPreparedListener(null)
@@ -214,7 +213,6 @@ class AudioPlaybackService : Service() {
         when (focusChange) {
             // when app has lost long-term audio focus (another app or system is taking over audio)
             AudioManager.AUDIOFOCUS_LOSS -> {
-                println("full loss")
                 // Release media player and stop playback
                 setInactiveImagesInPlayerActivity()
                 onDestroy()
@@ -222,17 +220,16 @@ class AudioPlaybackService : Service() {
             }
             // temporary lost audio focus ex. phone call / notification
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                println("temporary loss")
                 // Pause playback temporarily
                 mediaPlayer?.pause()
                 isPlaying = false
             }
             // app regains audio focus
             AudioManager.AUDIOFOCUS_GAIN -> {
-                println("regained")
                 // Resume playback
                 mediaPlayer?.start()
                 isPlaying = true
+                println("gained audio focus")
             }
         }
     }
@@ -251,23 +248,64 @@ class AudioPlaybackService : Service() {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
-    fun muteAudio() {
-        println("made it to mute")
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun muteAudio() {
         mediaPlayer?.setVolume(0f, 0f)
         isMuted = true
+        if (::audioFocusRequest.isInitialized){
+            audioManager.abandonAudioFocusRequest(audioFocusRequest)
+        }
     }
 
-    fun unmuteAudio() {
-        println("made it to unmute")
-        mediaPlayer?.setVolume(1f, 1f)
-        isMuted = false
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun unmuteAudio() {
+        if (::audioFocusRequest.isInitialized){
+            println("audio focus request is said to be initialized")
+            val focusRequestResult = audioManager.requestAudioFocus(audioFocusRequest)
+            if (focusRequestResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                println("WE GOT THE AUDIO")
+                mediaPlayer?.setVolume(1f, 1f)
+                isMuted = false
+            }
+            else{
+                println("wAH WWAH")
+            }
+        }
+        else{
+            println("no audio focus request")
+            // puts in audio focus request
+            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(audioAttributes)
+                .setOnAudioFocusChangeListener(afChangeListener)
+                .build()
+            mediaPlayer?.setVolume(1f, 1f)
+            isMuted = false
+        }
+
+
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun playMutedRadio(){
-        playRadio()
-        muteAudio()
+        initializeRadio()
+        println("played muted radio")
+        mediaPlayer?.setVolume(0f, 0f)
         isMuted = true
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun playRadio() {
+        audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(audioAttributes)
+            .setOnAudioFocusChangeListener(afChangeListener)
+            .build()
+
+        // Request audio focus
+        val result = audioManager.requestAudioFocus(audioFocusRequest)
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            // Audio focus granted, start playback
+            initializeRadio()
+        }
 
     }
 
@@ -281,7 +319,6 @@ class AudioPlaybackService : Service() {
                     hasConnection = false
                 }
                 else {
-                    println("there is a connection")
                     hasConnection = true
                 }
             }
