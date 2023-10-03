@@ -68,6 +68,7 @@ class PlayerActivity : AppCompatActivity() {
             toggleAudio()
         }
 
+        // button to open info screen
         btnInfoScreen.setOnClickListener {
             openInfoScreen()
         }
@@ -192,7 +193,6 @@ class PlayerActivity : AppCompatActivity() {
             println("sensed it was muted")
             // audio is "playing", so we pause "mute" the stream
             if (!AudioPlaybackService.isMuted) {
-                println("made it to intent part")
                 val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
                 audioServiceIntent.putExtra("action", "mute")
                 startService(audioServiceIntent)
@@ -343,7 +343,7 @@ class PlayerActivity : AppCompatActivity() {
     // sets inactive stream images
     private fun setInactiveStream() {
         streamImage.setImageResource(R.drawable.nobackground_inactive_stream)
-        btnPlayAudio.setImageResource(R.drawable.ios_play_button)
+        btnPlayAudio.setImageResource(R.drawable.play_button)
         AudioPlaybackService.isMuted = true
     }
 }

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:layout_gravity="center"
     android:padding="30dp"
     >
@@ -17,6 +17,7 @@
         android:text="@string/info_description"
         android:textAlignment="center"
         android:textSize="17sp"
+        android:textColor="@color/softWhite"
         app:layout_constraintBottom_toTopOf="@+id/btnRequest"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -28,12 +29,27 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-black"
         android:text="You’re tuned in."
+        android:textColor="@color/softWhite"
+
         android:textAlignment="center"
         android:textSize="40sp"
         app:layout_constraintBottom_toTopOf="@+id/info_description"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/guidelineInfoTop"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageButton
+        android:id="@+id/btnReturn"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/return_button"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="@+id/guidelineReturnButtonTop"
+        app:layout_constraintEnd_toEndOf="@id/guidelineReturnButtonEnd"
+        app:layout_constraintStart_toStartOf="@id/guidelineReturnButtonStart"
+        app:layout_constraintDimensionRatio="1:1"
+        android:scaleType="fitCenter"
+        />
 
     <Button
         android:id="@+id/btnSendFeedback"
@@ -42,7 +58,6 @@
         android:backgroundTint="@color/purple_700"
         android:text="Send us feedback on the app"
         android:textAllCaps="false"
-        app:layout_constraintBottom_toTopOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnRequest"
         tools:layout_editor_absoluteX="30dp" />
 
@@ -56,5 +71,37 @@
         app:layout_constraintBottom_toTopOf="@+id/btnSendFeedback"
         app:layout_constraintTop_toBottomOf="@+id/info_description"
         tools:layout_editor_absoluteX="30dp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineReturnButtonTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".01"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineReturnButtonStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineReturnButtonEnd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".15"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineInfoTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".22"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

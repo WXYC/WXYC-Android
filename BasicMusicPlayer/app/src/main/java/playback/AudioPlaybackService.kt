@@ -115,8 +115,6 @@ class AudioPlaybackService : Service() {
                 .build()
         }
 
-
-
         // recieves intent
         if (intent != null) {
             val action = intent.getStringExtra("action")
@@ -260,15 +258,15 @@ class AudioPlaybackService : Service() {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun unmuteAudio() {
         if (::audioFocusRequest.isInitialized){
-            println("audio focus request is said to be initialized")
+            println("audio focus request initialized. requesting audio focus...")
             val focusRequestResult = audioManager.requestAudioFocus(audioFocusRequest)
             if (focusRequestResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                println("WE GOT THE AUDIO")
+                println("audio focus request granted unmuting audio")
                 mediaPlayer?.setVolume(1f, 1f)
                 isMuted = false
             }
             else{
-                println("wAH WWAH")
+                println("audio focus request failed. unable to unmute audio")
             }
         }
         else{

@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,6 +6,81 @@
     android:layout_height="match_parent"
     android:background="@drawable/background"
     tools:context=".PlayerActivity">
+
+    <!-- wxyc logo at top of page -->
+    <ImageView
+        android:id="@+id/wxycLogo"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/logo"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="@id/guidelineLogoEnd"
+        app:layout_constraintStart_toStartOf="@id/guidelineLogoStart"
+        app:layout_constraintTop_toTopOf="@id/guidelineLogoTop"
+        />
+
+    <!-- toggle audio button -->
+    <ImageButton
+        android:id="@+id/toggleButton"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:scaleType="fitCenter"
+        android:src="@drawable/new_play_button"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toStartOf="@id/guidelineHeaderStart"
+        app:layout_constraintTop_toBottomOf="@id/wxycLogo"
+        app:layout_constraintBottom_toBottomOf="@id/guidelineContentTop"
+        android:layout_marginEnd="0dp"/>
+
+    <!-- kate's info screen button -->
+    <ImageButton
+        android:id="@+id/btnInfoScreen"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:scaleType="centerCrop"
+        android:src="@android:drawable/ic_menu_info_details"
+        app:layout_constraintStart_toStartOf="@id/guidelineInfoStart"
+        app:layout_constraintTop_toTopOf="@id/wxycLogo"
+        app:layout_constraintEnd_toEndOf="@id/guidelineInfoEnd"
+        app:layout_constraintDimensionRatio="1:1"
+        />
+
+    <!-- stream sound image -->
+    <ImageView
+        android:id="@+id/streamImage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/nobackground_inactive_stream"
+        app:layout_constraintEnd_toEndOf="@id/guidelineHeaderEnd"
+        app:layout_constraintStart_toEndOf="@id/toggleButton"
+        app:layout_constraintTop_toBottomOf="@id/wxycLogo"
+        app:layout_constraintBottom_toBottomOf="@id/guidelineContentTop"
+        android:layout_marginStart="0dp"/>
+
+    <!-- recyclerview for playlist -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:padding="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guidelineContentEnd"
+        app:layout_constraintStart_toStartOf="@id/guidelineContentStart"
+        app:layout_constraintTop_toBottomOf="@id/toggleButton"
+        tools:listitem="@layout/song_item" />
+
+    <include
+        layout="@layout/loading_screen"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
 
     <!-- Guideline to determine logo and button size -->
     <androidx.constraintlayout.widget.Guideline
@@ -46,6 +119,19 @@
         app:layout_constraintGuide_percent=".94" />
 
     <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineInfoStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".85" />
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineInfoEnd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".97" />
+
+    <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guidelineLogoStart"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -74,75 +160,5 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent=".25"
         />
-
-
-
-
-    <!-- wxyc logo at top of page -->
-    <ImageView
-        android:id="@+id/wxycLogo"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:src="@drawable/logo"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toEndOf="@id/guidelineLogoEnd"
-        app:layout_constraintStart_toStartOf="@id/guidelineLogoStart"
-        app:layout_constraintTop_toTopOf="@id/guidelineLogoTop"
-        />
-
-
-
-    <!-- toggle audio button -->
-    <ImageButton
-        android:id="@+id/toggleButton"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@android:color/transparent"
-        android:scaleType="fitCenter"
-        android:src="@drawable/new_play_button"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintStart_toStartOf="@id/guidelineHeaderStart"
-        app:layout_constraintTop_toBottomOf="@id/wxycLogo"
-        app:layout_constraintBottom_toBottomOf="@id/guidelineContentTop"
-        android:layout_marginEnd="0dp"/>
-
-
-    <!-- stream sound image -->
-    <ImageView
-        android:id="@+id/streamImage"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:scaleType="fitXY"
-        android:src="@drawable/nobackground_inactive_stream"
-        app:layout_constraintEnd_toEndOf="@id/guidelineHeaderEnd"
-        app:layout_constraintStart_toEndOf="@id/toggleButton"
-        app:layout_constraintTop_toBottomOf="@id/wxycLogo"
-        app:layout_constraintBottom_toBottomOf="@id/guidelineContentTop"
-        android:layout_marginStart="0dp"/>
-
-
-    <!-- recyclerview for playlist -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:padding="4dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@id/guidelineContentEnd"
-        app:layout_constraintStart_toStartOf="@id/guidelineContentStart"
-        app:layout_constraintTop_toBottomOf="@id/toggleButton"
-        tools:listitem="@layout/song_item" />
-
-    <include
-        layout="@layout/loading_screen"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
-
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
