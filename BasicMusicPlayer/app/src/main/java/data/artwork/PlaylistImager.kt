@@ -44,7 +44,6 @@ class PlaylistImager {
                     val itunesURL = fetchItunesImageURL(playlist[i])
                     if (itunesURL != null) {
                         playlist[i].playcut.imageURL = itunesURL
-                        println("itunes saved the day")
                         continue
                     }
                     // if lastfm and itunes null try discogs
@@ -57,10 +56,9 @@ class PlaylistImager {
                     val artistUrl = fetchDiscogsArtistImageURL(playlist[i])
                     if (artistUrl != null) {
                         playlist[i].playcut.imageURL = artistUrl
-                        println("artist image filled in")
                         continue
                     }
-                    println("All fetchers are null for " + playlist[i].playcut)
+                    // println("All fetchers are null for " + playlist[i].playcut)
                 }
             }
             return@coroutineScope deferred
@@ -204,7 +202,6 @@ class PlaylistImager {
                 DISCOGS_SECRET_KEY
             )
             if (response.isSuccessful) {
-                //println("FETCH IMAGE CHECKPOINT 2")
                 val responseBody = response.body()
                 if (responseBody != null) {
                     val discogsJson = responseBody.string()

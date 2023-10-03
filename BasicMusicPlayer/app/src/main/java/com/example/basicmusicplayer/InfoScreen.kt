@@ -6,18 +6,22 @@ import androidx.appcompat.app.AppCompatActivity
 import android.widget.Button
 import android.content.Intent
 import android.net.Uri
+import android.widget.ImageButton
 
 class InfoScreen : AppCompatActivity() {
     private lateinit var btnRequest: Button
     private lateinit var btnSendFeedback: Button
     private val requestIntent = Intent(Intent.ACTION_DIAL)
     private val feedbackIntent = Intent(Intent.ACTION_SENDTO)
+    private lateinit var btnReturn: ImageButton
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.info_screen)
         btnRequest = findViewById(R.id.btnRequest)
         btnSendFeedback = findViewById(R.id.btnSendFeedback)
+        btnReturn = findViewById(R.id.btnReturn)
 
         btnRequest.setOnClickListener {
             requestIntent.data = Uri.parse("tel:9199628989")
@@ -28,6 +32,9 @@ class InfoScreen : AppCompatActivity() {
             feedbackIntent.data = Uri.parse("mailto:feedback@wxyc.org?subject=Feedback%20on%20the%20WXYC%20Android%20app")
             startActivity(feedbackIntent)
         }
-    }
 
+        btnReturn.setOnClickListener {
+            finish()
+        }
+    }
 }
