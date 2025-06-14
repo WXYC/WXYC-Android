@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -40,63 +41,164 @@ class PlayerActivity : AppCompatActivity() {
     private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
     private var muteCounter = 0
 
+    companion object {
+        private const val TAG = "PlayerActivity"
+    }
+
     // initializes the activity and sets the layout
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onCreate: Starting PlayerActivity initialization")
+        
+        try {
+            super.onCreate(savedInstanceState)
+            Log.d(TAG, "onCreate: Super onCreate completed successfully")
+            
+            setContentView(R.layout.activity_player)
+            Log.d(TAG, "onCreate: Content view set successfully")
 
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_player)
+            // Set up global exception handler for this activity
+            setupGlobalExceptionHandler()
 
-        initializeActivity()
+            initializeActivity()
+            Log.d(TAG, "onCreate: Activity initialization completed")
 
-        // Register a BroadcastReceiver to update image resources
-        setUpImageUpdateReceiver()
+            // Register a BroadcastReceiver to update image resources
+            setUpImageUpdateReceiver()
+            Log.d(TAG, "onCreate: Image update receiver registered")
 
-        val playlistRefresh = updatePlaylist()
-        val muteStatus = checkMuteStatus()
+            val playlistRefresh = updatePlaylist()
+            val muteStatus = checkMuteStatus()
 
-        //refreshes the playlist every 30 seconds
-        executor.scheduleAtFixedRate(playlistRefresh, 20, 30, TimeUnit.SECONDS)
-        // checks to see if stream has been muted every minute. if stream has been muted for...
-        // 1 minute, it releases the player
-        executor.scheduleAtFixedRate(muteStatus, 30, 30, TimeUnit.SECONDS)
+            //refreshes the playlist every 30 seconds
+            executor.scheduleAtFixedRate(playlistRefresh, 20, 30, TimeUnit.SECONDS)
+            Log.d(TAG, "onCreate: Playlist refresh scheduled")
+            
+            // checks to see if stream has been muted every minute. if stream has been muted for...
+            // 1 minute, it releases the player
+            executor.scheduleAtFixedRate(muteStatus, 30, 30, TimeUnit.SECONDS)
+            Log.d(TAG, "onCreate: Mute status check scheduled")
 
+            // listens for button to be clicked
+            btnPlayAudio.setOnClickListener {
+                try {
+                    Log.d(TAG, "Play audio button clicked")
+                    toggleAudio()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in play audio button click handler", e)
+                }
+            }
 
-        // listens for button to be clicked
-        btnPlayAudio.setOnClickListener {
-            toggleAudio()
+            btnInfoScreen.setOnClickListener {
+                try {
+                    Log.d(TAG, "Info screen button clicked")
+                    openInfoScreen()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in info screen button click handler", e)
+                }
+            }
+            
+            Log.i(TAG, "onCreate: PlayerActivity initialization completed successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "CRITICAL ERROR in onCreate: PlayerActivity failed to initialize", e)
+            // Don't rethrow - let the app try to continue or fail gracefully
+            Toast.makeText(this, "Failed to initialize app. Please restart.", Toast.LENGTH_LONG).show()
         }
+    }
 
-        btnInfoScreen.setOnClickListener {
-            openInfoScreen()
+    private fun setupGlobalExceptionHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
+            Log.e(TAG, "UNCAUGHT EXCEPTION in thread: ${thread.name}", exception)
+            Log.e(TAG, "Exception details: ${exception.message}")
+            Log.e(TAG, "Stack trace: ${exception.stackTraceToString()}")
+            
+            // Call the default handler to maintain normal crash behavior
+            defaultHandler?.uncaughtException(thread, exception)
         }
+        Log.d(TAG, "Global exception handler set up")
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        stopService(Intent(this, AudioPlaybackService::class.java))
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(imageUpdateReceiver)
-        executor.shutdown()
+        Log.d(TAG, "onDestroy: Starting cleanup")
+        
+        try {
+            super.onDestroy()
+            Log.d(TAG, "onDestroy: Super onDestroy completed")
+            
+            stopService(Intent(this, AudioPlaybackService::class.java))
+            Log.d(TAG, "onDestroy: AudioPlaybackService stopped")
+            
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(imageUpdateReceiver)
+            Log.d(TAG, "onDestroy: Image update receiver unregistered")
+            
+            executor.shutdown()
+            Log.d(TAG, "onDestroy: Executor shutdown")
+            
+            Log.i(TAG, "onDestroy: Cleanup completed successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during onDestroy cleanup", e)
+            // Continue with cleanup even if there are errors
+        }
     }
 
     private fun initializeActivity() {
-        // LoadingView used while the recyclerView is preparing
-        loadingView = findViewById(R.id.loading_screen)
-        recyclerView = findViewById(R.id.recycler_view)
-        // initialization of properties
-        streamImage = findViewById(R.id.streamImage)
-        btnPlayAudio = findViewById(R.id.toggleButton)
-        btnInfoScreen = findViewById(R.id.btnInfoScreen)
+        Log.d(TAG, "initializeActivity: Starting activity initialization")
+        
+        try {
+            // LoadingView used while the recyclerView is preparing
+            loadingView = findViewById(R.id.loading_screen)
+            Log.d(TAG, "initializeActivity: Loading view found")
+            
+            recyclerView = findViewById(R.id.recycler_view)
+            Log.d(TAG, "initializeActivity: RecyclerView found")
+            
+            // initialization of properties
+            streamImage = findViewById(R.id.streamImage)
+            Log.d(TAG, "initializeActivity: Stream image found")
+            
+            btnPlayAudio = findViewById(R.id.toggleButton)
+            Log.d(TAG, "initializeActivity: Play audio button found")
+            
+            btnInfoScreen = findViewById(R.id.btnInfoScreen)
+            Log.d(TAG, "initializeActivity: Info screen button found")
 
-        showLoadingView()
+            showLoadingView()
+            Log.d(TAG, "initializeActivity: Loading view shown")
 
-        startService(Intent(this, AudioPlaybackService::class.java))
-        setInactiveStream()
+            startService(Intent(this, AudioPlaybackService::class.java))
+            Log.d(TAG, "initializeActivity: AudioPlaybackService started")
+            
+            setInactiveStream()
+            Log.d(TAG, "initializeActivity: Stream set to inactive state")
 
-        //sets up initial playlist and then shows the playlist when ready
-        scope.launch {
-            setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
-            viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
-            showContentView()
+            //sets up initial playlist and then shows the playlist when ready
+            scope.launch {
+                try {
+                    Log.d(TAG, "initializeActivity: Starting playlist setup coroutine")
+                    setPlaylistDetailsList(playlistManager.fetchFullPlaylist())
+                    Log.d(TAG, "initializeActivity: Playlist data fetched successfully")
+                    
+                    viewManager.setupRecyclerView(recyclerView, playlistDetailsList)
+                    Log.d(TAG, "initializeActivity: RecyclerView setup completed")
+                    
+                    showContentView()
+                    Log.d(TAG, "initializeActivity: Content view shown, initialization complete")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in playlist setup coroutine", e)
+                    runOnUiThread {
+                        Toast.makeText(this@PlayerActivity, "Failed to load playlist. Check your internet connection.", Toast.LENGTH_LONG).show()
+                        // Still show content view so user can potentially retry
+                        showContentView()
+                    }
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "CRITICAL ERROR in initializeActivity", e)
+            Toast.makeText(this, "Failed to initialize app components", Toast.LENGTH_LONG).show()
+            throw e // Re-throw to let onCreate handle it
         }
     }
 
@@ -157,51 +259,71 @@ class PlayerActivity : AppCompatActivity() {
 
     // toggles the audio
     private fun toggleAudio() {
-        // handles extra, unnecessary clicks of button
-        if (AudioPlaybackService.isPreparing) {
-            return
-        }
-        // if audio stream is not running, we need to start the stream again
-        if (!AudioPlaybackService.isPlaying) {
-            println(" ODD CASE")
-            // case for stream is not playing but it appears to still be active, essentially resets things
-            if (!AudioPlaybackService.isMuted){
-                setInactiveStream()
+        Log.d(TAG, "toggleAudio: Starting audio toggle")
+        
+        try {
+            // handles extra, unnecessary clicks of button
+            if (AudioPlaybackService.isPreparing) {
+                Log.d(TAG, "toggleAudio: Audio service is preparing, ignoring click")
+                return
             }
-            // audio stream is not playing, but we want to start the stream again
-            else{
-                // starts the stream if there is internet connection
-                if (AudioPlaybackService.hasConnection) {
+            
+            Log.d(TAG, "toggleAudio: Current state - isPlaying: ${AudioPlaybackService.isPlaying}, isMuted: ${AudioPlaybackService.isMuted}, hasConnection: ${AudioPlaybackService.hasConnection}")
+            
+            // if audio stream is not running, we need to start the stream again
+            if (!AudioPlaybackService.isPlaying) {
+                Log.d(TAG, "toggleAudio: Audio stream is not playing")
+                // case for stream is not playing but it appears to still be active, essentially resets things
+                if (!AudioPlaybackService.isMuted){
+                    Log.d(TAG, "toggleAudio: Resetting inactive stream")
+                    setInactiveStream()
+                }
+                // audio stream is not playing, but we want to start the stream again
+                else{
+                    // starts the stream if there is internet connection
+                    if (AudioPlaybackService.hasConnection) {
+                        Log.d(TAG, "toggleAudio: Starting unmuted stream")
+                        val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
+                        audioServiceIntent.putExtra("action", "startUnmuted")
+                        startService(audioServiceIntent)
+                        setActiveStream()
+                        Toast.makeText(applicationContext, "Loading WXYC stream", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    // case where there is no internet
+                    else {
+                        Log.w(TAG, "toggleAudio: No internet connection available")
+                        Toast.makeText(applicationContext, "No Internet Connection", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                }
+            }
+            // stream is running but just muted (paused) or unmuted (playing)
+            else {
+                Log.d(TAG, "toggleAudio: Audio stream is playing, toggling mute state")
+                // audio is "playing", so we pause "mute" the stream
+                if (!AudioPlaybackService.isMuted) {
+                    Log.d(TAG, "toggleAudio: Muting audio stream")
                     val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
-                    audioServiceIntent.putExtra("action", "startUnmuted")
+                    audioServiceIntent.putExtra("action", "mute")
+                    startService(audioServiceIntent)
+                    setInactiveStream()
+                }
+                // audio is "paused", so we play "unmute" the stream
+                else {
+                    Log.d(TAG, "toggleAudio: Unmuting audio stream")
+                    val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
+                    audioServiceIntent.putExtra("action", "unmute")
                     startService(audioServiceIntent)
                     setActiveStream()
-                    Toast.makeText(applicationContext, "Loading WXYC stream", Toast.LENGTH_LONG)
-                        .show()
-                }
-                // case where there is no internet
-                else {
-                    Toast.makeText(applicationContext, "No Internet Connection", Toast.LENGTH_LONG)
-                        .show()
                 }
             }
-        }
-        // stream is running but just muted (paused) or unmuted (playing)
-        else {
-            // audio is "playing", so we pause "mute" the stream
-            if (!AudioPlaybackService.isMuted) {
-                val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
-                audioServiceIntent.putExtra("action", "mute")
-                startService(audioServiceIntent)
-                setInactiveStream()
-            }
-            // audio is "paused", so we play "unmute" the stream
-            else {
-                val audioServiceIntent = Intent(this, AudioPlaybackService::class.java)
-                audioServiceIntent.putExtra("action", "unmute")
-                startService(audioServiceIntent)
-                setActiveStream()
-            }
+            
+            Log.d(TAG, "toggleAudio: Audio toggle completed successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "CRITICAL ERROR in toggleAudio", e)
+            Toast.makeText(this, "Error controlling audio playback", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -218,41 +340,54 @@ class PlayerActivity : AppCompatActivity() {
     private fun updatePlaylist(): Runnable {
         return Runnable {
             scope.launch {
-                // fetches last 7 updated playlist values
-                var updatedSubList = playlistManager.fetchLittlePlaylist()
-                // bool value to keep track of update type
-                var newEntry = false
+                try {
+                    Log.d(TAG, "updatePlaylist: Starting playlist update check")
+                    
+                    // fetches last 7 updated playlist values
+                    var updatedSubList = playlistManager.fetchLittlePlaylist()
+                    Log.d(TAG, "updatePlaylist: Fetched ${updatedSubList?.size ?: 0} updated playlist items")
+                    
+                    // bool value to keep track of update type
+                    var newEntry = false
 
-                // if there is no current playlist, skip this iteration of the updates
-                if (playlistDetailsList.size < UPDATE_UPPER_VALUE) {
-                    println("playlist is not ready")
-                    initializeActivity()
-                    return@launch
-                }
-                if (updatedSubList.isNullOrEmpty()) {
-                    return@launch
-                }
+                    // if there is no current playlist, skip this iteration of the updates
+                    if (playlistDetailsList.size < UPDATE_UPPER_VALUE) {
+                        Log.w(TAG, "updatePlaylist: Playlist not ready, size: ${playlistDetailsList.size}")
+                        initializeActivity()
+                        return@launch
+                    }
+                    if (updatedSubList.isNullOrEmpty()) {
+                        Log.w(TAG, "updatePlaylist: Updated sublist is null or empty")
+                        return@launch
+                    }
 
-                // this section compares the first 7 entries of the current list and an updated list
-                // if there are differences the first 7 entries will be updated
-                if (updatedSubList.size != UPDATE_UPPER_VALUE) {
-                    updatedSubList = updatedSubList.subList(0, UPDATE_UPPER_VALUE)
-                }
+                    // this section compares the first 7 entries of the current list and an updated list
+                    // if there are differences the first 7 entries will be updated
+                    if (updatedSubList.size != UPDATE_UPPER_VALUE) {
+                        Log.d(TAG, "updatePlaylist: Trimming updated sublist from ${updatedSubList.size} to $UPDATE_UPPER_VALUE")
+                        updatedSubList = updatedSubList.subList(0, UPDATE_UPPER_VALUE)
+                    }
 
-                // fetches last 7 current playlist values
-                val currentSubList = playlistDetailsList.subList(0, UPDATE_UPPER_VALUE)
+                    // fetches last 7 current playlist values
+                    val currentSubList = playlistDetailsList.subList(0, UPDATE_UPPER_VALUE)
 
-                //  checks if the lists are the same
-                if (!compareLists(updatedSubList, currentSubList)) {
-                    // this determined if the two sublists are different.  now we need to check if
-                    // an entry was added or there was an edit to the playlist (with no added entry)
+                    //  checks if the lists are the same
+                    if (!compareLists(updatedSubList, currentSubList)) {
+                        Log.d(TAG, "updatePlaylist: Lists are different, checking for updates")
+                        // this determined if the two sublists are different.  now we need to check if
+                        // an entry was added or there was an edit to the playlist (with no added entry)
 
-                    // checks if the content in the lists are the same i.e. just an edit in order
-                    newEntry = !compareListContent(updatedSubList, currentSubList)
-                    //COMPARISON PART OVER
-                    fetchUpdatedPlaylistEntries(newEntry)
-                } else {
-                    println("no update")
+                        // checks if the content in the lists are the same i.e. just an edit in order
+                        newEntry = !compareListContent(updatedSubList, currentSubList)
+                        Log.d(TAG, "updatePlaylist: New entry detected: $newEntry")
+                        //COMPARISON PART OVER
+                        fetchUpdatedPlaylistEntries(newEntry)
+                    } else {
+                        Log.d(TAG, "updatePlaylist: No update needed")
+                    }
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in updatePlaylist", e)
                 }
             }
         }
