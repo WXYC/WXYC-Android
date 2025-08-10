@@ -17,7 +17,7 @@
         android:text="@string/info_description"
         android:textAlignment="center"
         android:textSize="17sp"
-        app:layout_constraintBottom_toTopOf="@+id/btnRequest"
+        app:layout_constraintBottom_toTopOf="@+id/btnDialADJ"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tuned_in" />
@@ -39,22 +39,33 @@
         android:id="@+id/btnSendFeedback"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/purple_700"
+        android:backgroundTint="#FF0000"
         android:text="Send us feedback on the app"
         android:textAllCaps="false"
         app:layout_constraintBottom_toTopOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnRequest"
+        app:layout_constraintTop_toBottomOf="@+id/btnMakeRequest"
         tools:layout_editor_absoluteX="30dp" />
 
     <Button
-        android:id="@+id/btnRequest"
+        android:id="@+id/btnDialADJ"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/teal_700"
-        android:text="Call in a request"
+        android:backgroundTint="#34C759"
+        android:text="Dial a DJ"
         android:textAllCaps="false"
-        app:layout_constraintBottom_toTopOf="@+id/btnSendFeedback"
+        app:layout_constraintBottom_toTopOf="@+id/btnMakeRequest"
         app:layout_constraintTop_toBottomOf="@+id/info_description"
+        tools:layout_editor_absoluteX="30dp" />
+
+    <Button
+        android:id="@+id/btnMakeRequest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#007AFF"
+        android:text="Make a Request"
+        android:textAllCaps="false"
+        app:layout_constraintTop_toBottomOf="@+id/btnDialADJ"
+        app:layout_constraintBottom_toTopOf="@+id/btnSendFeedback"
         tools:layout_editor_absoluteX="30dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
