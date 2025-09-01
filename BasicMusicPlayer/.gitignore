@@ -14,3 +14,6 @@
 .cxx
 local.properties
 .DS_Store
+
+# App configuration (contains sensitive data)
+app/src/main/assets/config.properties

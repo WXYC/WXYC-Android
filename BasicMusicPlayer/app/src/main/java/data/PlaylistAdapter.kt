@@ -41,7 +41,7 @@ class PlaylistAdapter(private val playlistData: MutableList<PlaylistDetails>) :
         // resets the view holder so updates display properly
         holder.cardView.visibility = View.VISIBLE
         holder.entryTypesTextView.visibility = View.GONE
-        holder.imageView.setImageResource(R.drawable.wxyc_slash_logo)
+        holder.imageView.setImageResource(R.drawable.wxyc_placeholder)
         holder.songName.text = ""
         holder.artistName.text = ""
 

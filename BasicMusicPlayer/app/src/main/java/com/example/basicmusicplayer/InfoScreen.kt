@@ -10,6 +10,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,19 +20,31 @@ import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.Properties
 
 class InfoScreen : AppCompatActivity() {
     private lateinit var btnDialADJ: Button
     private lateinit var btnMakeRequest: Button
     private lateinit var btnSendFeedback: Button
-    private val requestIntent = Intent(Intent.ACTION_DIAL)
+    private val dialIntent = Intent(Intent.ACTION_DIAL)
     private val feedbackIntent = Intent(Intent.ACTION_SENDTO)
     private val httpClient: OkHttpClient by lazy { OkHttpClient() }
 
     companion object {
         private const val TAG = "InfoScreen"
-        // Note: Leading '@' and trailing whitespace removed from the provided URL
-        private const val WEBHOOK_URL = "https://hooks.slack.com/services/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"
+    }
+    
+    private val webhookUrl: String by lazy {
+        try {
+            val properties = Properties()
+            val inputStream = assets.open("config.properties")
+            properties.load(inputStream)
+            inputStream.close()
+            properties.getProperty("slack.webhook.url") ?: ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading config.properties", e)
+            ""
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,8 +55,8 @@ class InfoScreen : AppCompatActivity() {
         btnSendFeedback = findViewById(R.id.btnSendFeedback)
 
         btnDialADJ.setOnClickListener {
-            requestIntent.data = Uri.parse("tel:9199628989")
-            startActivity(requestIntent)
+            dialIntent.data = Uri.parse("tel:9199628989")
+            startActivity(dialIntent)
         }
 
         btnSendFeedback.setOnClickListener {
@@ -64,7 +77,7 @@ class InfoScreen : AppCompatActivity() {
             maxLines = 5
         }
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("What would you like to request?")
             .setMessage("Please include song title and artist.")
             .setView(inputField)
@@ -81,10 +94,32 @@ class InfoScreen : AppCompatActivity() {
             .setNegativeButton("Cancel") { dialog, _ ->
                 dialog.dismiss()
             }
-            .show()
+            .create()
+        
+        // Set up the editor action listener after dialog is created
+        inputField.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_SEND) {
+                // Trigger the positive button click
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+                true
+            } else {
+                false
+            }
+        }
+        
+        dialog.show()
+        inputField.requestFocus()
     }
 
     private fun sendRequest(requestText: String) {
+        if (webhookUrl.isEmpty()) {
+            Log.e(TAG, "Webhook URL is not configured")
+            Toast.makeText(this, "Configuration error, Webhook URL is not configured", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.i(TAG, "Sending request: $webhookUrl")
+        
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val payloadJson = JSONObject().put("text", requestText).toString()
@@ -92,7 +127,7 @@ class InfoScreen : AppCompatActivity() {
                 val requestBody = payloadJson.toRequestBody(mediaType)
 
                 val httpRequest = Request.Builder()
-                    .url(WEBHOOK_URL)
+                    .url(webhookUrl)
                     .addHeader("Content-Type", "application/json")
                     .method("POST", requestBody)
                     .build()
