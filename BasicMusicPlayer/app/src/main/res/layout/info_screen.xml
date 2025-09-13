@@ -3,69 +3,71 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:layout_gravity="center"
     android:padding="30dp"
+    android:background="@android:color/white"
     >
 
-    <TextView
-        android:id="@+id/info_description"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/content_group"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="30dp"
-        android:justificationMode="inter_word"
-        android:text="@string/info_description"
-        android:textAlignment="center"
-        android:textSize="17sp"
-        app:layout_constraintBottom_toTopOf="@+id/btnDialADJ"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tuned_in" />
-
-    <TextView
-        android:id="@+id/tuned_in"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-black"
-        android:text="You’re tuned in."
-        android:textAlignment="center"
-        android:textSize="40sp"
-        app:layout_constraintBottom_toTopOf="@+id/info_description"
+        android:orientation="vertical"
+        android:gravity="center"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <Button
-        android:id="@+id/btnSendFeedback"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#FF0000"
-        android:text="Send us feedback on the app"
-        android:textAllCaps="false"
-        app:layout_constraintBottom_toTopOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnMakeRequest"
-        tools:layout_editor_absoluteX="30dp" />
+        <TextView
+            android:id="@+id/tuned_in"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-black"
+            android:text="You're tuned in."
+            android:textAlignment="center"
+            android:textSize="40sp" />
 
-    <Button
-        android:id="@+id/btnDialADJ"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#34C759"
-        android:text="Dial a DJ"
-        android:textAllCaps="false"
-        app:layout_constraintBottom_toTopOf="@+id/btnMakeRequest"
-        app:layout_constraintTop_toBottomOf="@+id/info_description"
-        tools:layout_editor_absoluteX="30dp" />
+        <TextView
+            android:id="@+id/info_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="30dp"
+            android:justificationMode="inter_word"
+            android:text="@string/info_description"
+            android:textAlignment="center"
+            android:textSize="17sp" />
 
-    <Button
-        android:id="@+id/btnMakeRequest"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#007AFF"
-        android:text="Make a Request"
-        android:textAllCaps="false"
-        app:layout_constraintTop_toBottomOf="@+id/btnDialADJ"
-        app:layout_constraintBottom_toTopOf="@+id/btnSendFeedback"
-        tools:layout_editor_absoluteX="30dp" />
+        <Button
+            android:id="@+id/btnDialADJ"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:backgroundTint="#34C759"
+            android:text="Dial a DJ"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnMakeRequest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#007AFF"
+            android:text="Make a Request"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnSendFeedback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#FF0000"
+            android:text="Send us feedback on the app"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
