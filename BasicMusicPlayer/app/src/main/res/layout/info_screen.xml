@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:layout_gravity="center"
     android:padding="30dp"
-    android:background="@android:color/white"
+    android:background="@android:color/black"
     >
 
     <LinearLayout
@@ -24,10 +24,11 @@
             android:id="@+id/tuned_in"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-black"
             android:text="You're tuned in."
             android:textAlignment="center"
-            android:textSize="40sp" />
+            android:textColor="@android:color/white"
+            android:textSize="40sp"
+            android:fontFamily="sans-serif-black"  />
 
         <TextView
             android:id="@+id/info_description"
@@ -36,8 +37,9 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="30dp"
             android:justificationMode="inter_word"
+            android:fontFamily="sans-serif-white"
             android:text="@string/info_description"
-            android:textAlignment="center"
+            android:textColor="@android:color/white"
             android:textSize="17sp" />
 
         <Button
@@ -47,7 +49,8 @@
             android:layout_marginTop="20dp"
             android:backgroundTint="#34C759"
             android:text="Dial a DJ"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="@android:color/white" />
 
         <Button
             android:id="@+id/btnMakeRequest"
@@ -56,7 +59,8 @@
             android:layout_marginTop="10dp"
             android:backgroundTint="#007AFF"
             android:text="Make a Request"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="@android:color/white" />
 
         <Button
             android:id="@+id/btnSendFeedback"
@@ -65,7 +69,8 @@
             android:layout_marginTop="10dp"
             android:backgroundTint="#FF0000"
             android:text="Send us feedback on the app"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="@android:color/white" />
 
     </LinearLayout>
 
