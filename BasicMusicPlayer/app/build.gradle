@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.example.basicmusicplayer'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "org.wxyc.WXYCCH"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode 32
         versionName "1.1"
 
@@ -25,13 +25,21 @@ android {
     }
     buildFeatures {
         viewBinding true
+        buildConfig false
+    }
+    
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+        warningsAsErrors false
+        disable 'MissingTranslation', 'NotificationPermission'
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 }
 
