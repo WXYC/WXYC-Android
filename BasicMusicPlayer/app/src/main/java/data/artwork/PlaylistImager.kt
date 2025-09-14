@@ -173,9 +173,8 @@ class PlaylistImager {
                     if (imageUrl == "") {
                         return null
                     }
-                    if (imageUrl != null) {
-                        return imageUrl
-                    }
+
+                    return imageUrl
                 }
             } else {
                 // Handle the error response

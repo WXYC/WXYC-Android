@@ -20,7 +20,6 @@ import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.util.Properties
 
 class InfoScreen : AppCompatActivity() {
     private lateinit var btnDialADJ: Button
@@ -34,15 +33,24 @@ class InfoScreen : AppCompatActivity() {
         private const val TAG = "InfoScreen"
     }
     
-    private val webhookUrl: String by lazy {
-        try {
-            val properties = Properties()
-            val inputStream = assets.open("config.properties")
-            properties.load(inputStream)
-            inputStream.close()
-            properties.getProperty("slack.webhook.url") ?: ""
+    private suspend fun getWebhookUrl(): String {
+        return try {
+            val request = Request.Builder()
+                .url("https://wxyc-requests-endpoint-production.up.railway.app")
+                .build()
+            
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val url = response.body?.string()?.trim()
+                    Log.d(TAG, "Fetched webhook URL from Railway endpoint")
+                    url ?: ""
+                } else {
+                    Log.e(TAG, "Failed to fetch webhook URL: ${response.code}")
+                    ""
+                }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading config.properties", e)
+            Log.e(TAG, "Error fetching webhook URL from Railway endpoint", e)
             ""
         }
     }
@@ -112,16 +120,21 @@ class InfoScreen : AppCompatActivity() {
     }
 
     private fun sendRequest(requestText: String) {
-        if (webhookUrl.isEmpty()) {
-            Log.e(TAG, "Webhook URL is not configured")
-            Toast.makeText(this, "Configuration error, Webhook URL is not configured", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        Log.i(TAG, "Sending request: $webhookUrl")
-        
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                // First, fetch the webhook URL from the Railway endpoint
+                val webhookUrl = getWebhookUrl()
+                
+                if (webhookUrl.isEmpty()) {
+                    Log.e(TAG, "Failed to fetch webhook URL from Railway endpoint")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@InfoScreen, "Failed to get webhook URL. Please try again.", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                Log.i(TAG, "Sending request to webhook URL")
+                
                 val payloadJson = JSONObject().put("text", requestText).toString()
                 val mediaType = "application/json; charset=utf-8".toMediaType()
                 val requestBody = payloadJson.toRequestBody(mediaType)
