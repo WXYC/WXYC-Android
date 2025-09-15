@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="WXYC">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-09-13T18:43:48.818099Z">
+        <DropdownSelection timestamp="2025-09-15T01:55:58.964038Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jake/.android/avd/Pixel_9_Pro_XL.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/jake/.android/avd/Small_Phone.avd" />
             </handle>
           </Target>
         </DropdownSelection>
