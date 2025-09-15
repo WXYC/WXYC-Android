@@ -3,6 +3,13 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Load secrets from properties file
+def secretsPropertiesFile = rootProject.file("../secrets.properties")
+def secretsProperties = new Properties()
+if (secretsPropertiesFile.exists()) {
+    secretsProperties.load(new FileInputStream(secretsPropertiesFile))
+}
+
 android {
     namespace 'com.example.basicmusicplayer'
     compileSdk 36
@@ -15,6 +22,10 @@ android {
         versionName "1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Add BuildConfig fields for secrets
+        buildConfigField "String", "RAILWAY_ENDPOINT_URL", "\"${secretsProperties.getProperty("RAILWAY_ENDPOINT_URL", "")}\""
+        buildConfigField "String", "SLACK_WEBHOOK_BASE_URL", "\"${secretsProperties.getProperty("SLACK_WEBHOOK_BASE_URL", "")}\""
     }
 
     buildTypes {
@@ -25,7 +36,7 @@ android {
     }
     buildFeatures {
         viewBinding true
-        buildConfig false
+        buildConfig true
     }
     
     lint {

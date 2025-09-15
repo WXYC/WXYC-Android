@@ -36,12 +36,14 @@ class InfoScreen : AppCompatActivity() {
     private suspend fun getWebhookUrl(): String {
         return try {
             val request = Request.Builder()
-                .url("https://wxyc-requests-endpoint-production.up.railway.app")
+                .url(BuildConfig.RAILWAY_ENDPOINT_URL)
                 .build()
+
+            Log.i(TAG, "Fetching webhook URL from Railway endpoint ${BuildConfig.RAILWAY_ENDPOINT_URL}")
             
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val url = response.body?.string()?.trim()
+                    val url = BuildConfig.SLACK_WEBHOOK_BASE_URL + response.body?.string()?.trim()
                     Log.d(TAG, "Fetched webhook URL from Railway endpoint")
                     url ?: ""
                 } else {
@@ -133,7 +135,7 @@ class InfoScreen : AppCompatActivity() {
                     return@launch
                 }
 
-                Log.i(TAG, "Sending request to webhook URL")
+                Log.i(TAG, "Sending request to webhook URL $webhookUrl")
                 
                 val payloadJson = JSONObject().put("text", requestText).toString()
                 val mediaType = "application/json; charset=utf-8".toMediaType()
