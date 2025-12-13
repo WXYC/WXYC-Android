@@ -3,6 +3,9 @@ package data.audio
 import kotlin.math.max
 import kotlin.math.ln
 import kotlin.math.exp
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 // Constants ported from VisualizerConstants
 object VisualizerConstants {
@@ -81,5 +84,10 @@ class PerBandEMANormalizer(bandCount: Int = VisualizerConstants.BAR_AMOUNT) : No
 
 // Global visualizer state holder
 object AudioVisualizerState {
-    var fftMagnitudes: FloatArray = FloatArray(0)
+    private val _fftMagnitudes = MutableStateFlow(FloatArray(VisualizerConstants.BAR_AMOUNT))
+    val fftMagnitudes: StateFlow<FloatArray> = _fftMagnitudes.asStateFlow()
+
+    fun updateMagnitudes(magnitudes: FloatArray) {
+        _fftMagnitudes.value = magnitudes
+    }
 }
