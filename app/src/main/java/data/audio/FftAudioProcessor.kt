@@ -7,7 +7,6 @@ import org.jtransforms.fft.DoubleFFT_1D
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.*
-import playback.AudioPlaybackService
 
 class FftAudioProcessor : BaseAudioProcessor() {
 
@@ -82,7 +81,7 @@ class FftAudioProcessor : BaseAudioProcessor() {
         if (remaining == 0) return
 
         // If muted, clear visualizer and just pass through audio
-        if (AudioPlaybackService.isMuted) {
+        if (AudioVisualizerState.isMuted) {
              AudioVisualizerState.reset()
              replaceOutputBuffer(remaining).put(inputBuffer).flip()
              return

@@ -87,6 +87,9 @@ object AudioVisualizerState {
     private val _fftMagnitudes = MutableStateFlow(FloatArray(VisualizerConstants.BAR_AMOUNT))
     val fftMagnitudes: StateFlow<FloatArray> = _fftMagnitudes.asStateFlow()
 
+    @Volatile
+    var isMuted: Boolean = false
+
     fun updateMagnitudes(magnitudes: FloatArray) {
         _fftMagnitudes.value = magnitudes
     }
