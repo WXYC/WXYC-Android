@@ -90,4 +90,8 @@ object AudioVisualizerState {
     fun updateMagnitudes(magnitudes: FloatArray) {
         _fftMagnitudes.value = magnitudes
     }
+
+    fun reset() {
+        _fftMagnitudes.value = FloatArray(VisualizerConstants.BAR_AMOUNT)
+    }
 }

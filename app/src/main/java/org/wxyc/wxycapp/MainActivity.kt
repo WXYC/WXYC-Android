@@ -9,32 +9,51 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.wxyc.wxycapp.ui.PlayerViewModel
+import org.wxyc.wxycapp.ui.screens.InfoScreen
 import org.wxyc.wxycapp.ui.screens.PlayerScreen
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import playback.AudioPlaybackService
-import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
-class PlayerActivity : ComponentActivity() {
+class MainActivity : ComponentActivity() {
     private lateinit var imageUpdateReceiver: BroadcastReceiver
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var muteCounter = 0
     private var viewModel: PlayerViewModel? = null
 
     companion object {
-        private const val TAG = "PlayerActivity"
+        private const val TAG = "MainActivity"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d(TAG, "onCreate: Starting PlayerActivity initialization")
+        Log.d(TAG, "onCreate: Starting MainActivity initialization")
 
         try {
             super.onCreate(savedInstanceState)
@@ -54,6 +73,9 @@ class PlayerActivity : ComponentActivity() {
                 val vm: PlayerViewModel = viewModel()
                 viewModel = vm
                 val uiState by vm.uiState.collectAsState()
+                
+                val pagerState = rememberPagerState(pageCount = { 2 })
+                val coroutineScope = rememberCoroutineScope()
 
                 // Load initial playlist on first composition
                 androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -61,11 +83,41 @@ class PlayerActivity : ComponentActivity() {
                 }
 
                 WXYCTheme {
-                    PlayerScreen(
-                        uiState = uiState,
-                        onTogglePlayback = { toggleAudio() },
-                        onInfoClick = { openInfoScreen() }
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        HorizontalPager(state = pagerState) { page ->
+                            when(page) {
+                                0 -> PlayerScreen(
+                                    uiState = uiState,
+                                    onTogglePlayback = { toggleAudio() }
+                                )
+                                1 -> InfoScreen()
+                            }
+                        }
+
+                        // Pagination Dots
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            repeat(2) { iteration ->
+                                val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
+                                Box(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .size(8.dp)
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(iteration)
+                                            }
+                                        }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -81,10 +133,10 @@ class PlayerActivity : ComponentActivity() {
             executor.scheduleAtFixedRate(muteStatus, 30, 30, TimeUnit.SECONDS)
             Log.d(TAG, "onCreate: Mute status check scheduled")
 
-            Log.i(TAG, "onCreate: PlayerActivity initialization completed successfully")
+            Log.i(TAG, "onCreate: MainActivity initialization completed successfully")
 
         } catch (e: Exception) {
-            Log.e(TAG, "CRITICAL ERROR in onCreate: PlayerActivity failed to initialize", e)
+            Log.e(TAG, "CRITICAL ERROR in onCreate: MainActivity failed to initialize", e)
             Toast.makeText(this, "Failed to initialize app. Please restart.", Toast.LENGTH_LONG).show()
         }
     }
@@ -175,11 +227,6 @@ class PlayerActivity : ComponentActivity() {
             Log.e(TAG, "CRITICAL ERROR in toggleAudio", e)
             Toast.makeText(this, "Error controlling audio playback", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun openInfoScreen() {
-        val infoIntent = Intent(this, InfoScreen::class.java)
-        startActivity(infoIntent)
     }
 
     private fun checkMuteStatus(): Runnable {

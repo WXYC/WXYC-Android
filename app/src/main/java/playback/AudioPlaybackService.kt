@@ -4,7 +4,7 @@ package playback
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
-import org.wxyc.wxycapp.PlayerActivity
+import org.wxyc.wxycapp.MainActivity
 import org.wxyc.wxycapp.R
 import android.content.Intent
 import android.content.IntentFilter
@@ -206,7 +206,7 @@ class AudioPlaybackService : Service() {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, PlayerActivity::class.java),
+            Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val channelId = "AudioPlaybackChannel"
@@ -226,6 +226,7 @@ class AudioPlaybackService : Service() {
     private fun releaseExoPlayer() {
         println("releasing ExoPlayer")
         setInactiveImagesInPlayerActivity()
+        data.audio.AudioVisualizerState.reset()
         exoPlayer?.run {
             stop()
             release()

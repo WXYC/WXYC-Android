@@ -44,7 +44,6 @@ import androidx.compose.ui.draw.drawBehind
 fun PlayerScreen(
     uiState: PlayerUiState,
     onTogglePlayback: () -> Unit,
-    onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -82,17 +81,11 @@ fun PlayerScreen(
                             .clip(RoundedCornerShape(8.dp))
                     ) {
                         SpectrumAnalyzerView(
-                            modifier = Modifier.fillMaxSize().padding(8.dp)
-                        )
-
-                        Text(
-                            text = "100 YEARS\nOF RADIO",
-                            color = Color.White.copy(alpha = 0.1f),
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 44.sp,
-                            modifier = Modifier.align(Alignment.Center)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(75.dp)
+                                .align(Alignment.BottomCenter)
+                                .padding(8.dp)
                         )
                     }
                     // Header with logo
@@ -143,19 +136,6 @@ fun PlayerScreen(
                                 .weight(1f)
                                 .height(70.dp)
                             )
-
-                        // Info button
-                        IconButton(
-                            onClick = onInfoClick,
-                            modifier = Modifier.size(70.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_info_details),
-                                contentDescription = "Info",
-                                tint = Color.White,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
                     }
                 }
 
@@ -197,8 +177,7 @@ private fun PlayerScreenPreview() {
                     )
                 )
             ),
-            onTogglePlayback = {},
-            onInfoClick = {}
+            onTogglePlayback = {}
         )
     }
 }

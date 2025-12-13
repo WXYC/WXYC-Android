@@ -28,5 +28,9 @@ app/release
 # App configuration (contains sensitive data)
 app/src/main/assets/config.properties
 
+
 # Logs
 logfile
+
+# Misc
+PlayerHeaderView/

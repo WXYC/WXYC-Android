@@ -7,6 +7,7 @@ import org.jtransforms.fft.DoubleFFT_1D
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.*
+import playback.AudioPlaybackService
 
 class FftAudioProcessor : BaseAudioProcessor() {
 
@@ -80,6 +81,13 @@ class FftAudioProcessor : BaseAudioProcessor() {
         val remaining = inputBuffer.remaining()
         if (remaining == 0) return
 
+        // If muted, clear visualizer and just pass through audio
+        if (AudioPlaybackService.isMuted) {
+             AudioVisualizerState.reset()
+             replaceOutputBuffer(remaining).put(inputBuffer).flip()
+             return
+        }
+
         // Assume PCM 16-bit
         // We need to read samples.
         // Copy to output immediately (passthrough)
@@ -151,7 +159,7 @@ class FftAudioProcessor : BaseAudioProcessor() {
         normalizer.normalize(magnitudes, VisualizerConstants.MAGNITUDE_LIMIT)
         
         // 4. Update State
-        AudioVisualizerState.fftMagnitudes = magnitudes
-        println("FFT Processed: ${magnitudes.joinToString { "%.2f".format(it) }}")
+        AudioVisualizerState.updateMagnitudes(magnitudes)
+        // println("FFT Processed: ${magnitudes.joinToString { "%.2f".format(it) }}") // Commented out to reduce noise
     }
 }

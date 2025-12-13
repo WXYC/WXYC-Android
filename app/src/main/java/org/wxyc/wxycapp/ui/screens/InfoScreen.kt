@@ -1,5 +1,8 @@
 package org.wxyc.wxycapp.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +19,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,27 +27,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.ui.InfoViewModel
 import org.wxyc.wxycapp.ui.theme.BlueButton
 import org.wxyc.wxycapp.ui.theme.GreenButton
 import org.wxyc.wxycapp.ui.theme.RedButton
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
 
 @Composable
-fun InfoScreenContent(
-    onDialDJ: () -> Unit,
-    onMakeRequest: (String) -> Unit,
-    onSendFeedback: () -> Unit,
+fun InfoScreen(
+    viewModel: InfoViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     var showRequestDialog by remember { mutableStateOf(false) }
     var requestText by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.requestStatus.collectLatest { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Box(
         modifier = modifier
@@ -76,7 +89,12 @@ fun InfoScreenContent(
             Spacer(modifier = Modifier.height(30.dp))
 
             Button(
-                onClick = onDialDJ,
+                onClick = {
+                    val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                        data = Uri.parse("tel:9199628989")
+                    }
+                    context.startActivity(dialIntent)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = GreenButton),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -96,7 +114,12 @@ fun InfoScreenContent(
             Spacer(modifier = Modifier.height(10.dp))
 
             Button(
-                onClick = onSendFeedback,
+                onClick = {
+                    val feedbackIntent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:feedback@wxyc.org?subject=Feedback%20on%20the%20WXYC%20Android%20app")
+                    }
+                    context.startActivity(feedbackIntent)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = RedButton),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -134,7 +157,7 @@ fun InfoScreenContent(
                 TextButton(
                     onClick = {
                         if (requestText.isNotBlank()) {
-                            onMakeRequest(requestText.trim())
+                            viewModel.makeRequest(requestText.trim())
                             showRequestDialog = false
                             requestText = ""
                         }
@@ -153,18 +176,6 @@ fun InfoScreenContent(
                     Text("Cancel")
                 }
             }
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun InfoScreenContentPreview() {
-    WXYCTheme {
-        InfoScreenContent(
-            onDialDJ = {},
-            onMakeRequest = {},
-            onSendFeedback = {}
         )
     }
 }
