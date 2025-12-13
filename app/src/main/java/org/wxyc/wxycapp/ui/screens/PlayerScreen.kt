@@ -26,11 +26,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.wxyc.wxycapp.R
 import org.wxyc.wxycapp.ui.PlayerUiState
-import org.wxyc.wxycapp.ui.components.LoadingScreen
+
 import org.wxyc.wxycapp.ui.components.PlaylistItem
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import data.PlayCutDetails
 import data.PlaylistDetails
+
+import androidx.compose.ui.draw.drawBehind
 
 @Composable
 fun PlayerScreen(
@@ -42,7 +44,18 @@ fun PlayerScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .drawBehind {
+                val gradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0.0f to Color(0xFF7E85C1),
+                    0.08f to Color(0xFF7E85C1),
+                    0.66f to Color(0xFFE27DB2),
+                    0.72f to Color(0xFFE98C8C),
+                    1.0f to Color(0xFFE6A1BF),
+                    startY = 0f,
+                    endY = size.height
+                )
+                drawRect(brush = gradient)
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -125,10 +138,7 @@ fun PlayerScreen(
             }
         }
 
-        // Loading overlay
-        if (uiState.isLoading) {
-            LoadingScreen()
-        }
+
     }
 }
 
@@ -165,14 +175,4 @@ private fun PlayerScreenPreview() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun PlayerScreenLoadingPreview() {
-    WXYCTheme {
-        PlayerScreen(
-            uiState = PlayerUiState(isLoading = true),
-            onTogglePlayback = {},
-            onInfoClick = {}
-        )
-    }
-}
+
