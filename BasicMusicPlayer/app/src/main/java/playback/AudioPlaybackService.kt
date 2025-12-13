@@ -14,8 +14,10 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -38,6 +40,7 @@ class AudioPlaybackService : Service() {
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var broadcastReceiver: BroadcastReceiver
     private var mediaPlayer: MediaPlayer? = null
+    private var wifiLock: WifiManager.WifiLock? = null
 
     // method is called when the service is created. sets up audio and initiates radio playback
     @RequiresApi(Build.VERSION_CODES.O)
@@ -85,8 +88,17 @@ class AudioPlaybackService : Service() {
     private fun playRadio() {
         val wxycURL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
         isPreparing = true
+
+        // Acquire WiFi lock to keep WiFi radio active during streaming
+        if (wifiLock == null) {
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "WXYC:WifiLock")
+        }
+        wifiLock?.acquire()
+
         //media player created and initialized
         mediaPlayer = MediaPlayer().apply {
+            setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
             setAudioAttributes(audioAttributes)
             setDataSource(wxycURL)
             //set to handle event when audio is prepared
@@ -153,6 +165,7 @@ class AudioPlaybackService : Service() {
         }
         mediaPlayer = null
         isPlaying = false // Set isPlaying to false when audio playback is destroyed
+        releaseWifiLock()
         audioManager.abandonAudioFocusRequest(audioFocusRequest)
         unregisterReceiver(broadcastReceiver)
         super.onDestroy()
@@ -206,6 +219,13 @@ class AudioPlaybackService : Service() {
         }
         mediaPlayer = null
         isPlaying = false // Set isPlaying to false when audio playback is destroyed
+        releaseWifiLock()
+    }
+
+    private fun releaseWifiLock() {
+        if (wifiLock?.isHeld == true) {
+            wifiLock?.release()
+        }
     }
 
     // used to monitor changes in audio focus state and adjust behavior accordingly
