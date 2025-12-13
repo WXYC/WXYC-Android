@@ -59,74 +59,74 @@ fun PlayerScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-
-
             // Playlist
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(4.dp)
             ) {
-                // Header with logo
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.wxyc_lowqual),
-                        contentDescription = "WXYC Logo",
+                item {
+                    // Header with logo
+                    Box(
                         modifier = Modifier
-                            .width(150.dp)
-                            .height(125.dp)
-                    )
-                }
-
-                // Controls row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Play/Pause button
-                    IconButton(
-                        onClick = onTogglePlayback,
-                        modifier = Modifier.size(70.dp)
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            painter = painterResource(
-                                id = if (uiState.isMuted) R.drawable.play_button else R.drawable.pause_button
-                            ),
-                            contentDescription = if (uiState.isMuted) "Play" else "Pause",
-                            modifier = Modifier.fillMaxSize()
+                            painter = painterResource(id = R.drawable.wxyc_lowqual),
+                            contentDescription = "WXYC Logo",
+                            modifier = Modifier
+                                .width(150.dp)
+                                .height(125.dp)
                         )
                     }
 
-                    // Stream visualization
-                    Image(
-                        painter = painterResource(
-                            id = if (uiState.isMuted) R.drawable.stream_inactive_short else R.drawable.stream_active_short
-                        ),
-                        contentDescription = "Stream status",
+                    // Controls row
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(70.dp)
-                        )
-
-                    // Info button
-                    IconButton(
-                        onClick = onInfoClick,
-                        modifier = Modifier.size(70.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            painter = painterResource(id = android.R.drawable.ic_menu_info_details),
-                            contentDescription = "Info",
-                            tint = Color.White,
-                            modifier = Modifier.size(40.dp)
-                        )
+                        // Play/Pause button
+                        IconButton(
+                            onClick = onTogglePlayback,
+                            modifier = Modifier.size(70.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(
+                                    id = if (uiState.isMuted) R.drawable.play_button else R.drawable.pause_button
+                                ),
+                                contentDescription = if (uiState.isMuted) "Play" else "Pause",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Stream visualization
+                        Image(
+                            painter = painterResource(
+                                id = if (uiState.isMuted) R.drawable.stream_inactive_short else R.drawable.stream_active_short
+                            ),
+                            contentDescription = "Stream status",
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(70.dp)
+                            )
+
+                        // Info button
+                        IconButton(
+                            onClick = onInfoClick,
+                            modifier = Modifier.size(70.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.ic_menu_info_details),
+                                contentDescription = "Info",
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
                     }
                 }
 
