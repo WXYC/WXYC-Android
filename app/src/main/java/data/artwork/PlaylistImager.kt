@@ -7,9 +7,11 @@ import data.artwork.discogs.DiscogsArtworkProvider
 import data.artwork.itunes.ItunesArtworkProvider
 import data.artwork.lastfm.LastFmArtworkProvider
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 
 // fetches playlist image data.
 class PlaylistImager @Inject constructor(
@@ -28,7 +30,7 @@ class PlaylistImager @Inject constructor(
 
     // fetches the image urls for given playlist using async tasks
     suspend fun fetchPlaylistImageURLs(playlist: MutableList<Playcut>) {
-        coroutineScope {
+        withContext(Dispatchers.IO) {
             playlist.filter { it.entryType == "playcut" }
                 .map { playlistItem ->
                     async { fetchImageFor(playlistItem) }

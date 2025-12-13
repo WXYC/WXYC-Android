@@ -26,10 +26,13 @@ class LastFmArtworkProvider @Inject constructor(
             if (response.isSuccessful) {
                 val responseBody = response.body()
                 if (responseBody != null) {
-                    val lastfmJson = responseBody.string()
-                    val cleanedJson = lastfmJson.replace("\\/", "/")
-                    val searchResult = Gson().fromJson(cleanedJson, LastFmResults::class.java)
-                    val imageUrl = searchResult.album.image.getOrNull(4)?.text
+                    val imageUrl = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                        val lastfmJson = responseBody.string()
+                        val cleanedJson = lastfmJson.replace("\\/", "/")
+                        val searchResult = Gson().fromJson(cleanedJson, LastFmResults::class.java)
+                        searchResult.album.image.getOrNull(4)?.text
+                    }
+
                     if (!imageUrl.isNullOrEmpty()) {
                         return imageUrl
                     }

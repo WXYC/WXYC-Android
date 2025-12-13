@@ -29,13 +29,22 @@ class DiscogsArtworkProvider @Inject constructor(
             if (response.isSuccessful) {
                 val responseBody = response.body()
                 if (responseBody != null) {
-                    val discogsJson = responseBody.string()
-                    val searchResult = Gson().fromJson(discogsJson, DiscogsResults::class.java)
-                    for (result in searchResult.results) {
-                        if (result.coverImage?.endsWith(".gif") == false) {
-                            Log.i("DiscogsArtworkProvider", "Fetched image URL: ${result.coverImage}")
-                            return result.coverImage
+                    val imageUrl = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                        val discogsJson = responseBody.string()
+                        val searchResult = Gson().fromJson(discogsJson, DiscogsResults::class.java)
+                        var foundUrl: String? = null
+                        for (result in searchResult.results) {
+                            if (result.coverImage?.endsWith(".gif") == false) {
+                                foundUrl = result.coverImage
+                                break
+                            }
                         }
+                        foundUrl
+                    }
+
+                    if (imageUrl != null) {
+                        Log.i("DiscogsArtworkProvider", "Fetched image URL: $imageUrl")
+                        return imageUrl
                     }
                     Log.w("DiscogsArtworkProvider", "No suitable image found in Discogs results")
                 } else {
