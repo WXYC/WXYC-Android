@@ -1,4 +1,32 @@
+# macOS
 .DS_Store
-logfile
-BasicMusicPlayer/app/release
+
+# Secrets
 secrets.properties
+local.properties
+
+# Gradle
+*.iml
+.gradle
+/build
+/app/build
+
+# IDE
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# Android
+/captures
+.externalNativeBuild
+.cxx
+app/release
+
+# App configuration (contains sensitive data)
+app/src/main/assets/config.properties
+
+# Logs
+logfile
