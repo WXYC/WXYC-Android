@@ -57,7 +57,7 @@ class PlayerActivity : ComponentActivity() {
 
                 // Load initial playlist on first composition
                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                    vm.loadInitialPlaylist()
+                    vm.fetchPlaylist()
                 }
 
                 WXYCTheme {
@@ -71,7 +71,7 @@ class PlayerActivity : ComponentActivity() {
 
             // Schedule playlist refresh
             val playlistRefresh = Runnable {
-                viewModel?.updatePlaylist()
+                viewModel?.fetchPlaylist()
             }
             executor.scheduleAtFixedRate(playlistRefresh, 20, 30, TimeUnit.SECONDS)
             Log.d(TAG, "onCreate: Playlist refresh scheduled")
