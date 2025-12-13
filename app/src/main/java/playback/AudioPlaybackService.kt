@@ -8,10 +8,7 @@ import org.wxyc.wxycapp.PlayerActivity
 import org.wxyc.wxycapp.R
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
@@ -33,13 +30,11 @@ class AudioPlaybackService : Service() {
         var isMuted: Boolean = false
         var hasConnection: Boolean = true
     }
-    //declares class properties for managing audio focus, attributes, and the media player
+
     private lateinit var audioManager: AudioManager
-    private lateinit var audioFocusRequest: AudioFocusRequest
-    private lateinit var audioAttributes: AudioAttributes
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var broadcastReceiver: BroadcastReceiver
-    private var mediaPlayer: MediaPlayer? = null
+    private var exoPlayer: androidx.media3.exoplayer.ExoPlayer? = null
     private var wifiLock: WifiManager.WifiLock? = null
 
     // method is called when the service is created. sets up audio and initiates radio playback
@@ -48,6 +43,7 @@ class AudioPlaybackService : Service() {
         super.onCreate()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "AudioPlaybackChannel"
             val channel = NotificationChannel(
@@ -57,22 +53,10 @@ class AudioPlaybackService : Service() {
             )
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
-
-            audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-
-            // Create an AudioFocusRequest
-            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(audioAttributes)
-                .setOnAudioFocusChangeListener(afChangeListener)
-                .build()
         }
 
         // Register network connectivity receiver
         setUpConnectionLossReceiver()
-
     }
 
     // function to see if app is connected to network
@@ -96,32 +80,68 @@ class AudioPlaybackService : Service() {
         }
         wifiLock?.acquire()
 
-        //media player created and initialized
-        mediaPlayer = MediaPlayer().apply {
-            setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
-            setAudioAttributes(audioAttributes)
-            setDataSource(wxycURL)
-            //set to handle event when audio is prepared
-            setOnPreparedListener { mp ->
-                mp.start()
-                Companion.isPlaying = true
-                println("STARTED RADIO FROM SCRATCH")
-                isPreparing = false
-            }
-            // Set up the error listener to handle any errors during media preparation
-            setOnErrorListener { mp, what, extra ->
-                isPreparing = false
-                releaseMediaPlayer() // Release the media player if an error occurs
-                false
-            }
-            val result = audioManager.requestAudioFocus(audioFocusRequest)
-            //initiates prep process
-            if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                // Start playback
-                prepareAsync()
-            }
+        if (exoPlayer == null) {
+            exoPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(this)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
+                        .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                        .build(),
+                    true // handleAudioFocus
+                )
+                .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .build()
+
+            exoPlayer?.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    when (playbackState) {
+                        androidx.media3.common.Player.STATE_READY -> {
+                            println("ExoPlayer STATE_READY")
+                            isPreparing = false
+                            // isPlaying state is handled by onIsPlayingChanged
+                        }
+                        androidx.media3.common.Player.STATE_BUFFERING -> {
+                            println("ExoPlayer STATE_BUFFERING")
+                            isPreparing = true
+                        }
+                        androidx.media3.common.Player.STATE_ENDED -> {
+                            println("ExoPlayer STATE_ENDED")
+                            isPreparing = false
+                        }
+                        androidx.media3.common.Player.STATE_IDLE -> {
+                            println("ExoPlayer STATE_IDLE")
+                            isPreparing = false
+                        }
+                    }
+                }
+
+                override fun onIsPlayingChanged(isPlayingState: Boolean) {
+                    Companion.isPlaying = isPlayingState
+                    if (isPlayingState) {
+                        println("ExoPlayer playing")
+                        setActiveImagesInPlayerActivity()
+                    } else {
+                        println("ExoPlayer paused/stopped")
+                        // Don't set inactive immediately unless it's a permanent stop/pause, 
+                        // but for radio stream, pause usually means stop.
+                    }
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    println("ExoPlayer Error: ${error.message}")
+                    isPreparing = false
+                    releaseExoPlayer()
+                }
+            })
         }
+
+        val mediaItem = androidx.media3.common.MediaItem.fromUri(wxycURL)
+        exoPlayer?.setMediaItem(mediaItem)
+        exoPlayer?.prepare()
+        exoPlayer?.play()
     }
+    
     //called when service begins. creates notification that service is running
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -142,7 +162,7 @@ class AudioPlaybackService : Service() {
                     "startUnmuted" -> playRadio()
                 }
             }
-            else if (mediaPlayer == null){
+            else if (exoPlayer == null){
                 playMutedRadio()
             }
         }
@@ -156,17 +176,7 @@ class AudioPlaybackService : Service() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
         println("made it to on destroy")
-        mediaPlayer?.apply {
-            setOnPreparedListener(null)
-            setOnErrorListener(null)
-            stop()
-            reset()
-            release()
-        }
-        mediaPlayer = null
-        isPlaying = false // Set isPlaying to false when audio playback is destroyed
-        releaseWifiLock()
-        audioManager.abandonAudioFocusRequest(audioFocusRequest)
+        releaseExoPlayer()
         unregisterReceiver(broadcastReceiver)
         super.onDestroy()
     }
@@ -184,18 +194,8 @@ class AudioPlaybackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val channelId = "AudioPlaybackChannel"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                channelId,
-                "Music Player",
-                NotificationManager.IMPORTANCE_LOW // Use LOW importance to make the notification less intrusive
-            )
-            // Set the audio attributes to null to mute sound and vibration
-            channel.setSound(null, null)
-            notificationManager.createNotificationChannel(channel)
-        }
-
+        // Channel creation moved to onCreate or handled if < O not supported generally for this part
+        
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle(null) // Remove the content title to make it more minimal
             .setContentText(null) // Remove the content text to make it more minimal
@@ -207,17 +207,14 @@ class AudioPlaybackService : Service() {
     }
 
     // releases media player
-    private fun releaseMediaPlayer() {
-        println("released media player")
+    private fun releaseExoPlayer() {
+        println("releasing ExoPlayer")
         setInactiveImagesInPlayerActivity()
-        mediaPlayer?.apply {
-            setOnPreparedListener(null)
-            setOnErrorListener(null)
+        exoPlayer?.run {
             stop()
-            reset()
             release()
         }
-        mediaPlayer = null
+        exoPlayer = null
         isPlaying = false // Set isPlaying to false when audio playback is destroyed
         releaseWifiLock()
     }
@@ -228,34 +225,7 @@ class AudioPlaybackService : Service() {
         }
     }
 
-    // used to monitor changes in audio focus state and adjust behavior accordingly
-    @RequiresApi(Build.VERSION_CODES.O)
-    private val afChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        when (focusChange) {
-            // when app has lost long-term audio focus (another app or system is taking over audio)
-            AudioManager.AUDIOFOCUS_LOSS -> {
-                println("full loss")
-                // Release media player and stop playback
-                setInactiveImagesInPlayerActivity()
-                onDestroy()
-                isPlaying = false
-            }
-            // temporary lost audio focus ex. phone call / notification
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                println("temporary loss")
-                // Pause playback temporarily
-                mediaPlayer?.pause()
-                isPlaying = false
-            }
-            // app regains audio focus
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                println("regained")
-                // Resume playback
-                mediaPlayer?.start()
-                isPlaying = true
-            }
-        }
-    }
+    // Audio focus listener removed as ExoPlayer handles it internally with .setAudioAttributes(..., true)
 
     private fun setActiveImagesInPlayerActivity() {
         val intent = Intent("UpdateImagesIntent").apply {
@@ -273,13 +243,13 @@ class AudioPlaybackService : Service() {
 
     fun muteAudio() {
         println("made it to mute")
-        mediaPlayer?.setVolume(0f, 0f)
+        exoPlayer?.volume = 0f
         isMuted = true
     }
 
     fun unmuteAudio() {
         println("made it to unmute")
-        mediaPlayer?.setVolume(1f, 1f)
+        exoPlayer?.volume = 1f
         isMuted = false
     }
 
@@ -288,7 +258,6 @@ class AudioPlaybackService : Service() {
         playRadio()
         muteAudio()
         isMuted = true
-
     }
 
     private fun setUpConnectionLossReceiver(){
@@ -297,7 +266,7 @@ class AudioPlaybackService : Service() {
                 if (!isNetworkConnected()) {
                     // Handle loss of network connectivity while playing
                     Toast.makeText(context, "Network connection lost", Toast.LENGTH_SHORT).show()
-                    releaseMediaPlayer()
+                    releaseExoPlayer()
                     hasConnection = false
                 }
                 else {
