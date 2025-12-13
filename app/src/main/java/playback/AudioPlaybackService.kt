@@ -81,7 +81,23 @@ class AudioPlaybackService : Service() {
         wifiLock?.acquire()
 
         if (exoPlayer == null) {
-            exoPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(this)
+            val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+                override fun buildAudioSink(
+                    context: Context,
+                    enableFloatOutput: Boolean,
+                    enableAudioTrackPlaybackParams: Boolean
+                ): androidx.media3.exoplayer.audio.AudioSink? {
+                    return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                        .setAudioProcessorChain(
+                            androidx.media3.exoplayer.audio.DefaultAudioSink.DefaultAudioProcessorChain(
+                                data.audio.FftAudioProcessor()
+                            )
+                        )
+                        .build()
+                }
+            }
+
+            exoPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
                 .setAudioAttributes(
                     androidx.media3.common.AudioAttributes.Builder()
                         .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
