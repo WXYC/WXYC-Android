@@ -1,38 +1,31 @@
 package com.example.basicmusicplayer
 
-import android.os.Bundle
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
 import android.content.Intent
 import android.net.Uri
-import androidx.appcompat.app.AlertDialog
-import android.text.InputType
-import android.view.inputmethod.EditorInfo
+import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
+import com.example.basicmusicplayer.ui.screens.InfoScreenContent
+import com.example.basicmusicplayer.ui.theme.WXYCTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
-class InfoScreen : AppCompatActivity() {
-    private lateinit var btnDialADJ: Button
-    private lateinit var btnMakeRequest: Button
-    private lateinit var btnSendFeedback: Button
-    private val dialIntent = Intent(Intent.ACTION_DIAL)
-    private val feedbackIntent = Intent(Intent.ACTION_SENDTO)
+class InfoScreen : ComponentActivity() {
     private val httpClient: OkHttpClient by lazy { OkHttpClient() }
 
     companion object {
         private const val TAG = "InfoScreen"
     }
-    
+
     private suspend fun getWebhookUrl(): String {
         return try {
             val request = Request.Builder()
@@ -40,7 +33,7 @@ class InfoScreen : AppCompatActivity() {
                 .build()
 
             Log.i(TAG, "Fetching webhook URL from Railway endpoint ${BuildConfig.RAILWAY_ENDPOINT_URL}")
-            
+
             httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val url = BuildConfig.SLACK_WEBHOOK_BASE_URL + response.body?.string()?.trim()
@@ -59,74 +52,42 @@ class InfoScreen : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.info_screen)
-        btnDialADJ = findViewById(R.id.btnDialADJ)
-        btnMakeRequest = findViewById(R.id.btnMakeRequest)
-        btnSendFeedback = findViewById(R.id.btnSendFeedback)
 
-        btnDialADJ.setOnClickListener {
-            dialIntent.data = Uri.parse("tel:9199628989")
-            startActivity(dialIntent)
-        }
-
-        btnSendFeedback.setOnClickListener {
-            feedbackIntent.data = Uri.parse("mailto:feedback@wxyc.org?subject=Feedback%20on%20the%20WXYC%20Android%20app")
-            startActivity(feedbackIntent)
-        }
-
-        btnMakeRequest.setOnClickListener {
-            showMakeRequestDialog()
+        setContent {
+            WXYCTheme {
+                InfoScreenContent(
+                    onDialDJ = { dialDJ() },
+                    onMakeRequest = { requestText -> sendRequest(requestText) },
+                    onSendFeedback = { sendFeedback() }
+                )
+            }
         }
     }
 
-    private fun showMakeRequestDialog() {
-        val inputField = EditText(this).apply {
-            hint = "Type your request..."
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            setLines(3)
-            maxLines = 5
+    private fun dialDJ() {
+        val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:9199628989")
         }
+        startActivity(dialIntent)
+    }
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("What would you like to request?")
-            .setMessage("Please include song title and artist.")
-            .setView(inputField)
-            .setPositiveButton("Send") { dialog, _ ->
-                val requestText = inputField.text?.toString()?.trim().orEmpty()
-                if (requestText.isEmpty()) {
-                    Toast.makeText(this, "Please enter a request before sending.", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                Log.d(TAG, "Sending request: $requestText")
-                sendRequest(requestText)
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .create()
-        
-        // Set up the editor action listener after dialog is created
-        inputField.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_SEND) {
-                // Trigger the positive button click
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-                true
-            } else {
-                false
-            }
+    private fun sendFeedback() {
+        val feedbackIntent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:feedback@wxyc.org?subject=Feedback%20on%20the%20WXYC%20Android%20app")
         }
-        
-        dialog.show()
-        inputField.requestFocus()
+        startActivity(feedbackIntent)
     }
 
     private fun sendRequest(requestText: String) {
+        if (requestText.isBlank()) {
+            Toast.makeText(this, "Please enter a request before sending.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // First, fetch the webhook URL from the Railway endpoint
                 val webhookUrl = getWebhookUrl()
-                
+
                 if (webhookUrl.isEmpty()) {
                     Log.e(TAG, "Failed to fetch webhook URL from Railway endpoint")
                     withContext(Dispatchers.Main) {
@@ -136,7 +97,7 @@ class InfoScreen : AppCompatActivity() {
                 }
 
                 Log.i(TAG, "Sending request to webhook URL $webhookUrl")
-                
+
                 val payloadJson = JSONObject().put("text", requestText).toString()
                 val mediaType = "application/json; charset=utf-8".toMediaType()
                 val requestBody = payloadJson.toRequestBody(mediaType)
@@ -168,5 +129,4 @@ class InfoScreen : AppCompatActivity() {
             }
         }
     }
-
 }

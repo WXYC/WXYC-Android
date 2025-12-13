@@ -1,0 +1,178 @@
+package com.example.basicmusicplayer.ui.screens
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.basicmusicplayer.R
+import com.example.basicmusicplayer.ui.PlayerUiState
+import com.example.basicmusicplayer.ui.components.LoadingScreen
+import com.example.basicmusicplayer.ui.components.PlaylistItem
+import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import data.PlayCutDetails
+import data.PlaylistDetails
+
+@Composable
+fun PlayerScreen(
+    uiState: PlayerUiState,
+    onTogglePlayback: () -> Unit,
+    onInfoClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Header with logo
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.wxyc_lowqual),
+                    contentDescription = "WXYC Logo",
+                    modifier = Modifier
+                        .width(150.dp)
+                        .height(125.dp)
+                )
+            }
+
+            // Controls row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Play/Pause button
+                IconButton(
+                    onClick = onTogglePlayback,
+                    modifier = Modifier.size(70.dp)
+                ) {
+                    Image(
+                        painter = painterResource(
+                            id = if (uiState.isMuted) R.drawable.play_button else R.drawable.pause_button
+                        ),
+                        contentDescription = if (uiState.isMuted) "Play" else "Pause",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Stream visualization
+                Image(
+                    painter = painterResource(
+                        id = if (uiState.isMuted) R.drawable.stream_inactive_short else R.drawable.stream_active_short
+                    ),
+                    contentDescription = "Stream status",
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(70.dp)
+                )
+
+                // Info button
+                IconButton(
+                    onClick = onInfoClick,
+                    modifier = Modifier.size(70.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_info_details),
+                        contentDescription = "Info",
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            }
+
+            // Playlist
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+            ) {
+                items(
+                    items = uiState.playlist,
+                    key = { it.id }
+                ) { item ->
+                    PlaylistItem(item = item)
+                }
+            }
+        }
+
+        // Loading overlay
+        if (uiState.isLoading) {
+            LoadingScreen()
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PlayerScreenPreview() {
+    WXYCTheme {
+        PlayerScreen(
+            uiState = PlayerUiState(
+                isLoading = false,
+                isPlaying = true,
+                isMuted = false,
+                playlist = listOf(
+                    PlaylistDetails(
+                        id = 1,
+                        entryType = "playcut",
+                        playcut = PlayCutDetails(
+                            rotation = "",
+                            request = "",
+                            songTitle = "Sample Song",
+                            labelName = "Label",
+                            artistName = "Sample Artist",
+                            releaseTitle = "Album",
+                            imageURL = ""
+                        ),
+                        hour = System.currentTimeMillis(),
+                        chronOrderID = 1
+                    )
+                )
+            ),
+            onTogglePlayback = {},
+            onInfoClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PlayerScreenLoadingPreview() {
+    WXYCTheme {
+        PlayerScreen(
+            uiState = PlayerUiState(isLoading = true),
+            onTogglePlayback = {},
+            onInfoClick = {}
+        )
+    }
+}
