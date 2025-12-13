@@ -2,7 +2,7 @@ package data.artwork.itunes
 
 import android.util.Log
 import com.google.gson.Gson
-import data.PlaylistDetails
+import data.Playcut
 import data.artwork.ArtworkProvider
 import data.artwork.itunes.ITunesResults
 import javax.inject.Inject
@@ -10,12 +10,12 @@ import javax.inject.Inject
 class ItunesArtworkProvider @Inject constructor(
     private val iTunesService: ITunesAPI
 ) : ArtworkProvider {
-    override suspend fun fetchImage(playcut: PlaylistDetails): String? {
+    override suspend fun fetchImage(playcut: Playcut): String? {
         try {
-            val artist = playcut.playcut.artistName
-            var release = playcut.playcut.releaseTitle
+            val artist = playcut.artistName ?: return null
+            var release = playcut.releaseTitle ?: return null
             if (release.equals("s/t", ignoreCase = true)) {
-                release = playcut.playcut.artistName
+                release = artist
             }
             val itunesSearch = "$artist $release"
             val response = iTunesService.getImage(itunesSearch)

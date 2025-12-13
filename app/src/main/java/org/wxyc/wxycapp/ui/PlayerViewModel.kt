@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import data.PlaylistDetails
+import data.Playcut
 import data.PlaylistManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +21,7 @@ data class PlayerUiState(
     val isLoading: Boolean = true,
     val isPlaying: Boolean = false,
     val isMuted: Boolean = true,
-    val playlist: List<PlaylistDetails> = emptyList(),
+    val playlist: List<Playcut> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -32,7 +32,7 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
-    private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
+    private val playlistDetailsList: MutableList<Playcut> = CopyOnWriteArrayList()
 
     companion object {
         private const val TAG = "PlayerViewModel"

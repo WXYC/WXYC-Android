@@ -2,7 +2,7 @@ package data.artwork.lastfm
 
 import android.util.Log
 import com.google.gson.Gson
-import data.PlaylistDetails
+import data.Playcut
 import data.artwork.ArtworkProvider
 import org.wxyc.wxycapp.BuildConfig
 import javax.inject.Inject
@@ -12,12 +12,12 @@ class LastFmArtworkProvider @Inject constructor(
 ) : ArtworkProvider {
     private val LASTFM_METHOD = "album.getinfo"
 
-    override suspend fun fetchImage(playcut: PlaylistDetails): String? {
+    override suspend fun fetchImage(playcut: Playcut): String? {
         try {
-            val artist = playcut.playcut.artistName
-            var release = playcut.playcut.releaseTitle
+            val artist = playcut.artistName ?: return null
+            var release = playcut.releaseTitle ?: return null
             if (release.equals("s/t", ignoreCase = true)) {
-                release = playcut.playcut.artistName
+                release = artist
             }
             val response = lastFmService.getAlbumInfo(
                 LASTFM_METHOD, BuildConfig.LASTFM_API_KEY, artist,

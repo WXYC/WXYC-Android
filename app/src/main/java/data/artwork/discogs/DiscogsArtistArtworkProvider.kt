@@ -2,7 +2,7 @@ package data.artwork.discogs
 
 import android.util.Log
 import com.google.gson.Gson
-import data.PlaylistDetails
+import data.Playcut
 import data.artwork.ArtworkProvider
 import org.wxyc.wxycapp.BuildConfig
 import javax.inject.Inject
@@ -13,9 +13,9 @@ class DiscogsArtistArtworkProvider @Inject constructor(
     private val VARIOUS_ARTISTS = "v/a"
     private val VARIOUS_ARTISTS_FULL = "various artists"
 
-    override suspend fun fetchImage(playcut: PlaylistDetails): String? {
+    override suspend fun fetchImage(playcut: Playcut): String? {
         try {
-            var artist = playcut.playcut.artistName
+            var artist = playcut.artistName ?: return null
             if (artist.equals(VARIOUS_ARTISTS, ignoreCase = true) || artist.equals(
                     VARIOUS_ARTISTS_FULL, ignoreCase = true
                 )

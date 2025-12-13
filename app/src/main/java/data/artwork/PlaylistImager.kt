@@ -1,7 +1,7 @@
 package data.artwork
 
 import android.util.Log
-import data.PlaylistDetails
+import data.Playcut
 import data.artwork.discogs.DiscogsArtistArtworkProvider
 import data.artwork.discogs.DiscogsArtworkProvider
 import data.artwork.itunes.ItunesArtworkProvider
@@ -27,7 +27,7 @@ class PlaylistImager @Inject constructor(
     )
 
     // fetches the image urls for given playlist using async tasks
-    suspend fun fetchPlaylistImageURLs(playlist: MutableList<PlaylistDetails>) {
+    suspend fun fetchPlaylistImageURLs(playlist: MutableList<Playcut>) {
         coroutineScope {
             playlist.filter { it.entryType == "playcut" }
                 .map { playlistItem ->
@@ -36,12 +36,12 @@ class PlaylistImager @Inject constructor(
         }
     }
 
-    private suspend fun fetchImageFor(playlistItem: PlaylistDetails) {
+    private suspend fun fetchImageFor(playlistItem: Playcut) {
         for (provider in providers) {
             Log.i("PlaylistImager", "Trying provider: ${provider.javaClass.simpleName}")
             val url = provider.fetchImage(playlistItem)
             if (url != null) {
-                playlistItem.playcut.imageURL = url
+                playlistItem.imageURL = url
                 return
             }
         }

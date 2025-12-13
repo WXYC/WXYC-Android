@@ -9,7 +9,7 @@ class PlaylistManager @Inject constructor(
     private val playlistImager: PlaylistImager
 ) {
     // fetches the full playlist
-    suspend fun fetchPlaylist(): MutableList<PlaylistDetails> {
+    suspend fun fetchPlaylist(): MutableList<Playcut> {
         val playlist = jsonImporter.fetchPlaylist().toMutableList()
         playlistImager.fetchPlaylistImageURLs(playlist)
         return playlist

@@ -3,7 +3,7 @@ package data.artwork.discogs
 import android.util.Log
 import com.google.gson.Gson
 import data.DiscogsResults
-import data.PlaylistDetails
+import data.Playcut
 import data.artwork.ArtworkProvider
 import org.wxyc.wxycapp.BuildConfig
 import javax.inject.Inject
@@ -11,12 +11,12 @@ import javax.inject.Inject
 class DiscogsArtworkProvider @Inject constructor(
     private val discogsService: DiscogsAPI
 ) : ArtworkProvider {
-    override suspend fun fetchImage(playcut: PlaylistDetails): String? {
+    override suspend fun fetchImage(playcut: Playcut): String? {
         try {
-            val artist = playcut.playcut.artistName
-            var release = playcut.playcut.releaseTitle
+            val artist = playcut.artistName ?: return null
+            var release = playcut.releaseTitle ?: return null
             if (release.equals("s/t", ignoreCase = true)) {
-                release = playcut.playcut.artistName
+                release = artist
             }
 
             val response = discogsService.getImage(

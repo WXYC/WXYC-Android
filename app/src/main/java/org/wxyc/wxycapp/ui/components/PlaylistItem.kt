@@ -27,8 +27,7 @@ import coil.request.ImageRequest
 import org.wxyc.wxycapp.R
 import org.wxyc.wxycapp.ui.theme.SoftWhite
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
-import data.PlayCutDetails
-import data.PlaylistDetails
+import data.Playcut
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,26 +35,26 @@ import java.util.TimeZone
 
 @Composable
 fun PlaylistItem(
-    item: PlaylistDetails,
+    item: Playcut,
     modifier: Modifier = Modifier
 ) {
     when (item.entryType) {
         "talkset" -> TalksetItem(modifier = modifier)
         "breakpoint" -> BreakpointItem(hour = item.hour, modifier = modifier)
-        else -> SongItem(playcut = item.playcut, modifier = modifier)
+        else -> SongItem(playcut = item, modifier = modifier)
     }
 }
 
 @Composable
 private fun SongItem(
-    playcut: PlayCutDetails,
+    playcut: Playcut,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Black)
+        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.0f))
     ) {
         Column(
             modifier = Modifier
@@ -65,7 +64,7 @@ private fun SongItem(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(playcut.imageURL.takeIf { !it.isNullOrEmpty() })
+                    .data(playcut.imageURL?.takeIf { it.isNotEmpty() })
                     .crossfade(true)
                     .build(),
                 contentDescription = "Album art for ${playcut.songTitle}",
@@ -79,7 +78,7 @@ private fun SongItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = playcut.songTitle,
+                text = playcut.songTitle ?: "",
                 color = SoftWhite,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -89,7 +88,7 @@ private fun SongItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = playcut.artistName,
+                text = playcut.artistName ?: "",
                 color = SoftWhite,
                 fontSize = 14.sp,
                 modifier = Modifier.fillMaxWidth()
@@ -147,7 +146,11 @@ private fun convertTime(timestampMillis: Long): String {
 private fun SongItemPreview() {
     WXYCTheme {
         SongItem(
-            playcut = PlayCutDetails(
+            playcut = Playcut(
+                id = 1,
+                entryType = "playcut",
+                hour = System.currentTimeMillis(),
+                chronOrderID = 1,
                 rotation = "",
                 request = "",
                 songTitle = "Sample Song Title",

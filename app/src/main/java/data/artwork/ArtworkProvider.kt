@@ -1,7 +1,7 @@
 package data.artwork
 
-import data.PlaylistDetails
+import data.Playcut
 
 interface ArtworkProvider {
-    suspend fun fetchImage(playcut: PlaylistDetails): String?
+    suspend fun fetchImage(playcut: Playcut): String?
 }
