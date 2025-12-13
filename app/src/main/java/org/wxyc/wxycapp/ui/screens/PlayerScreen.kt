@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer.ui.screens
+package org.wxyc.wxycapp.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,11 +24,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.basicmusicplayer.R
-import com.example.basicmusicplayer.ui.PlayerUiState
-import com.example.basicmusicplayer.ui.components.LoadingScreen
-import com.example.basicmusicplayer.ui.components.PlaylistItem
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.ui.PlayerUiState
+import org.wxyc.wxycapp.ui.components.LoadingScreen
+import org.wxyc.wxycapp.ui.components.PlaylistItem
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import data.PlayCutDetails
 import data.PlaylistDetails
 

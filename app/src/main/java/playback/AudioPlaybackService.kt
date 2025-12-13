@@ -4,8 +4,8 @@ package playback
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
-import com.example.basicmusicplayer.PlayerActivity
-import com.example.basicmusicplayer.R
+import org.wxyc.wxycapp.PlayerActivity
+import org.wxyc.wxycapp.R
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioAttributes

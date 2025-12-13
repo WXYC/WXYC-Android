@@ -1,8 +1,9 @@
-package com.example.basicmusicplayer.ui
+package org.wxyc.wxycapp.ui
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import data.PlaylistDetails
 import data.PlaylistManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
+import javax.inject.Inject
 
 private const val UPDATE_UPPER_VALUE = 6
 private const val UPDATE_LOWER_VALUE = 0
@@ -25,11 +27,13 @@ data class PlayerUiState(
     val errorMessage: String? = null
 )
 
-class PlayerViewModel : ViewModel() {
+@HiltViewModel
+class PlayerViewModel @Inject constructor(
+    private val playlistManager: PlaylistManager
+) : ViewModel() {
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
-    private val playlistManager = PlaylistManager()
     private val playlistDetailsList: MutableList<PlaylistDetails> = CopyOnWriteArrayList()
 
     companion object {

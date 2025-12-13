@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer
+package org.wxyc.wxycapp
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -13,14 +13,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.example.basicmusicplayer.ui.PlayerViewModel
-import com.example.basicmusicplayer.ui.screens.PlayerScreen
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.ui.PlayerViewModel
+import org.wxyc.wxycapp.ui.screens.PlayerScreen
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import playback.AudioPlaybackService
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+@AndroidEntryPoint
 class PlayerActivity : ComponentActivity() {
     private lateinit var imageUpdateReceiver: BroadcastReceiver
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()

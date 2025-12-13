@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer
+package org.wxyc.wxycapp
 
 import android.content.Intent
 import android.net.Uri
@@ -8,8 +8,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
-import com.example.basicmusicplayer.ui.screens.InfoScreenContent
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.ui.screens.InfoScreenContent
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

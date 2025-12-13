@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer.ui.screens
+package org.wxyc.wxycapp.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -29,11 +29,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.basicmusicplayer.R
-import com.example.basicmusicplayer.ui.theme.BlueButton
-import com.example.basicmusicplayer.ui.theme.GreenButton
-import com.example.basicmusicplayer.ui.theme.RedButton
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.ui.theme.BlueButton
+import org.wxyc.wxycapp.ui.theme.GreenButton
+import org.wxyc.wxycapp.ui.theme.RedButton
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 
 @Composable
 fun InfoScreenContent(

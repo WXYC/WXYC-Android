@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer.ui.theme
+package org.wxyc.wxycapp.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

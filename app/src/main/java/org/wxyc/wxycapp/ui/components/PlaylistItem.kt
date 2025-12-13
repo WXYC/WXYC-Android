@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer.ui.components
+package org.wxyc.wxycapp.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.basicmusicplayer.R
-import com.example.basicmusicplayer.ui.theme.SoftWhite
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.ui.theme.SoftWhite
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import data.PlayCutDetails
 import data.PlaylistDetails
 import java.text.SimpleDateFormat

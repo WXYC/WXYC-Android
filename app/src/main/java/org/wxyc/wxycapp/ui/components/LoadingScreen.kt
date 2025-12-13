@@ -1,4 +1,4 @@
-package com.example.basicmusicplayer.ui.components
+package org.wxyc.wxycapp.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,8 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.basicmusicplayer.R
-import com.example.basicmusicplayer.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.ui.theme.WXYCTheme
 
 @Composable
 fun LoadingScreen(

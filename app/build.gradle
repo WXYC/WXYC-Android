@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    id 'kotlin-kapt'
+    id 'com.google.dagger.hilt.android'
 }
 
 // Load secrets from properties file
@@ -12,7 +14,7 @@ if (secretsPropertiesFile.exists()) {
 }
 
 android {
-    namespace 'com.example.basicmusicplayer'
+    namespace 'org.wxyc.wxycapp'
     compileSdk 36
 
     defaultConfig {
@@ -27,6 +29,9 @@ android {
         // Add BuildConfig fields for secrets
         buildConfigField "String", "RAILWAY_ENDPOINT_URL", "\"${secretsProperties.getProperty("RAILWAY_ENDPOINT_URL", "")}\""
         buildConfigField "String", "SLACK_WEBHOOK_BASE_URL", "\"${secretsProperties.getProperty("SLACK_WEBHOOK_BASE_URL", "")}\""
+        buildConfigField "String", "DISCOGS_API_KEY", "\"${secretsProperties.getProperty("DISCOGS_API_KEY", "")}\""
+        buildConfigField "String", "DISCOGS_SECRET_KEY", "\"${secretsProperties.getProperty("DISCOGS_SECRET_KEY", "")}\""
+        buildConfigField "String", "LASTFM_API_KEY", "\"${secretsProperties.getProperty("LASTFM_API_KEY", "")}\""
     }
 
     buildTypes {
@@ -98,4 +103,9 @@ dependencies {
 
     // Coil for image loading
     implementation 'io.coil-kt:coil-compose:2.7.0'
+
+    // Hilt
+    implementation "com.google.dagger:hilt-android:2.48"
+    kapt "com.google.dagger:hilt-compiler:2.48"
+    implementation 'androidx.hilt:hilt-navigation-compose:1.0.0'
 }
