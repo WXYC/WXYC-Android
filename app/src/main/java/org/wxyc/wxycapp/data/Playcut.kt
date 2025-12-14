@@ -1,4 +1,4 @@
-package data
+package org.wxyc.wxycapp.data
 
 data class Playcut(
     val id: Int,
