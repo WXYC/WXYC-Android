@@ -61,7 +61,6 @@ fun InfoScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
             .padding(30.dp),
         contentAlignment = Alignment.Center
     ) {
