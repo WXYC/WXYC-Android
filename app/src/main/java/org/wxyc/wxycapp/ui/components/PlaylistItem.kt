@@ -94,7 +94,7 @@ private fun SongItem(
                     color = Color.White, // iOS .foregroundStyle(.white)
                     fontSize = 17.sp, // Approximate SwiftUI Body size
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -104,7 +104,7 @@ private fun SongItem(
                     text = playcut.artistName ?: "",
                     color = Color.White, // iOS .foregroundStyle(.white)
                     fontSize = 15.sp, // Slightly smaller than title but distinct
-                    maxLines = 1,
+                    maxLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
