@@ -101,6 +101,7 @@ class AudioPlaybackService : MediaSessionService() {
 
         val mediaItem = MediaItem.fromUri("http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3")
         exoPlayer?.setMediaItem(mediaItem)
+        exoPlayer?.playWhenReady = false
         exoPlayer?.prepare()
 
         mediaSession = MediaSession.Builder(this, exoPlayer!!)

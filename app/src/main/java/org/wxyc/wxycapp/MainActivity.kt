@@ -26,6 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -75,7 +77,21 @@ class MainActivity : ComponentActivity() {
                 }
 
                 WXYCTheme {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val gradient = Brush.verticalGradient(
+                                0.0f to Color(0xFF7E85C1),
+                                0.08f to Color(0xFF7E85C1),
+                                0.66f to Color(0xFFE27DB2),
+                                0.72f to Color(0xFFE98C8C),
+                                1.0f to Color(0xFFE6A1BF),
+                                startY = 0f,
+                                endY = size.height
+                            )
+                            drawRect(brush = gradient)
+                        }
+                    ) {
                         HorizontalPager(state = pagerState) { page ->
                             when(page) {
                                 0 -> PlayerScreen(
