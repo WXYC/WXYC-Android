@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.wxyc.wxycapp.analytics.PostHogManager
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
@@ -43,6 +44,7 @@ class PlayerViewModel @Inject constructor(
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
+    private var playStartTime: Long = 0L // Track when playback started for duration calculation
 
     companion object {
         private const val TAG = "PlayerViewModel"
@@ -86,8 +88,21 @@ class PlayerViewModel @Inject constructor(
     fun togglePlayback() {
         controller?.let {
             if (it.isPlaying) {
+                // Pause the player
+                val duration = System.currentTimeMillis() - playStartTime
+                PostHogManager.capturePause(
+                    source = "PlayerViewModel.togglePlayback",
+                    duration = duration,
+                    reason = "User toggled playback"
+                )
                 it.pause()
             } else {
+                // Play the player
+                playStartTime = System.currentTimeMillis()
+                PostHogManager.capturePlay(
+                    source = "PlayerViewModel.togglePlayback",
+                    reason = "User toggled playback"
+                )
                 it.play()
             }
         }
@@ -114,6 +129,13 @@ class PlayerViewModel @Inject constructor(
                 Log.d(TAG, "fetchPlaylist: Loaded ${playlist.size} items")
             } catch (e: Exception) {
                 Log.e(TAG, "fetchPlaylist: Error loading playlist", e)
+                
+                // Track playlist fetch error
+                PostHogManager.captureError(
+                    error = e,
+                    context = "PlayerViewModel.fetchPlaylist"
+                )
+                
                 _uiState.update {
                     it.copy(
                         isLoading = false,

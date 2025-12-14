@@ -32,6 +32,7 @@ android {
         buildConfigField "String", "DISCOGS_API_KEY", "\"${secretsProperties.getProperty("DISCOGS_API_KEY", "")}\""
         buildConfigField "String", "DISCOGS_SECRET_KEY", "\"${secretsProperties.getProperty("DISCOGS_SECRET_KEY", "")}\""
         buildConfigField "String", "LASTFM_API_KEY", "\"${secretsProperties.getProperty("LASTFM_API_KEY", "")}\""
+        buildConfigField "String", "POSTHOG_API_KEY", "\"${secretsProperties.getProperty("POSTHOG_API_KEY", "")}\""
     }
 
     buildTypes {
@@ -116,4 +117,7 @@ dependencies {
 
     // FFT
     implementation 'com.github.wendykierp:JTransforms:3.1'
+
+    // PostHog Analytics
+    implementation 'com.posthog:posthog-android:3.+'
 }
