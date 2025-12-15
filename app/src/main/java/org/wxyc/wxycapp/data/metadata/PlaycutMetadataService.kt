@@ -177,15 +177,34 @@ class PlaycutMetadataService @Inject constructor(
                         }
                     }
                 }
+                "artist" -> {
+                    // Direct artist result
+                    try {
+                        val artist = discogsApi.getArtist(
+                            artistId = result.id,
+                            apiKey = DISCOGS_API_KEY,
+                            apiSecret = DISCOGS_SECRET_KEY
+                        )
+                        
+                        artistBio = artist.profile
+                        wikipediaURL = artist.wikipediaURL
+                        
+                        Log.d(TAG, "Extracted wikipediaURL: $wikipediaURL")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to fetch artist details", e)
+                    }
+                }
             }
             
-            DiscogsMetadata(
+            val metadata = DiscogsMetadata(
                 label = result.primaryLabel,
                 releaseYear = result.releaseYear,
                 discogsURL = result.discogsWebURL,
                 artistBio = artistBio,
                 wikipediaURL = wikipediaURL
             )
+            
+            metadata
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch Discogs metadata for ${playcut.artistName} - ${playcut.songTitle}", e)
             DiscogsMetadata(null, null, null, null, null)
