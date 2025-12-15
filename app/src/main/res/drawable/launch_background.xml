@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Gradient background matching app theme -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#7E85C1"
+                android:centerColor="#E27DB2"
+                android:endColor="#E6A1BF" />
+        </shape>
+    </item>
+</layer-list>
