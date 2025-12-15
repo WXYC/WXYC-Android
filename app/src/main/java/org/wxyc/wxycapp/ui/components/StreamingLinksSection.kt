@@ -8,7 +8,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -110,12 +113,37 @@ private fun StreamingServiceButton(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // TODO: Replace with actual icons once exported from iOS
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
+            val iconModifier = Modifier.size(20.dp)
+            
+            if (service.useCustomIcon) {
+                val resId = context.resources.getIdentifier(service.iconResourceName, "drawable", context.packageName)
+                if (resId != 0) {
+                    Icon(
+                        painter = painterResource(id = resId),
+                        contentDescription = null,
+                        modifier = iconModifier,
+                        tint = Color.Unspecified // Use original colors from the drawable
+                    )
+                } else {
+                    // Fallback if resource not found
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = iconModifier
+                    )
+                }
+            } else {
+                val icon = when (service.iconResourceName) {
+                    "play_circle_filled" -> Icons.Default.PlayCircle
+                    "waveform" -> Icons.Default.GraphicEq
+                    else -> Icons.Default.MusicNote
+                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = iconModifier
+                )
+            }
             
             Text(
                 text = service.displayName,
