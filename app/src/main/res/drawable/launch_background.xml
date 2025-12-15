@@ -11,4 +11,9 @@
                 android:endColor="#E6A1BF" />
         </shape>
     </item>
+
+    <!-- WXYC Logo -->
+    <item
+        android:drawable="@drawable/wxyc_logo_white"
+        android:gravity="center" />
 </layer-list>
