@@ -1,10 +1,8 @@
 package org.wxyc.wxycapp.data.metadata
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
-import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -14,6 +12,7 @@ import org.wxyc.wxycapp.data.PlaycutMetadata
 import org.wxyc.wxycapp.data.api.DiscogsApiService
 import org.wxyc.wxycapp.data.api.ITunesApiService
 import org.wxyc.wxycapp.data.api.SpotifyApiService
+import org.wxyc.wxycapp.data.caching.CacheCoordinator
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -28,13 +27,9 @@ class PlaycutMetadataService @Inject constructor(
     private val spotifyAuthApi: SpotifyApiService,
     @Named("SpotifySearch") private val spotifySearchApi: SpotifyApiService,
     private val itunesApi: ITunesApiService,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    @Named("MetadataCacheCoordinator") private val cacheCoordinator: CacheCoordinator
 ) {
-    private val prefs: SharedPreferences by lazy {
-        context.getSharedPreferences(PREF_NAME_METADATA_CACHE, Context.MODE_PRIVATE)
-    }
-    
-    private val gson = Gson()
     
     // Spotify token management (synchronized for thread safety)
     @Volatile private var spotifyToken: String? = null
@@ -42,7 +37,6 @@ class PlaycutMetadataService @Inject constructor(
     
     companion object {
         private const val TAG = "PlaycutMetadataService"
-        private const val PREF_NAME_METADATA_CACHE = "playcut_metadata_cache"
         private const val CACHE_LIFESPAN_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
         private const val DISCOGS_API_KEY = BuildConfig.DISCOGS_API_KEY
         private const val DISCOGS_SECRET_KEY = BuildConfig.DISCOGS_SECRET_KEY
@@ -57,7 +51,7 @@ class PlaycutMetadataService @Inject constructor(
         val cacheKey = "metadata_${playcut.id}"
         
         // Check cache first
-        getCachedMetadata(cacheKey)?.let { return it }
+        cacheCoordinator.getValue<PlaycutMetadata>(cacheKey)?.let { return it }
         
         // Fetch from all sources concurrently
         val metadata = coroutineScope {
@@ -85,7 +79,7 @@ class PlaycutMetadataService @Inject constructor(
         }
         
         // Cache result
-        cacheMetadata(cacheKey, metadata)
+        cacheCoordinator.setValue(cacheKey, metadata, CACHE_LIFESPAN_MS)
         
         return metadata
     }
@@ -286,31 +280,6 @@ class PlaycutMetadataService @Inject constructor(
             .replace(" ", "%20")
         return "https://soundcloud.com/search?q=$query"
     }
-    
-    // MARK: - Caching
-    
-    private fun getCachedMetadata(key: String): PlaycutMetadata? {
-        val json = prefs.getString(key, null) ?: return null
-        val entry = gson.fromJson(json, CacheEntry::class.java)
-        
-        // Check if expired
-        if (System.currentTimeMillis() - entry.timestamp > CACHE_LIFESPAN_MS) {
-            prefs.edit().remove(key).apply()
-            return null
-        }
-        
-        return entry.metadata
-    }
-    
-    private fun cacheMetadata(key: String, metadata: PlaycutMetadata) {
-        val entry = CacheEntry(metadata, System.currentTimeMillis())
-        prefs.edit().putString(key, gson.toJson(entry)).apply()
-    }
-    
-    private data class CacheEntry(
-        val metadata: PlaycutMetadata,
-        val timestamp: Long
-    )
     
     private fun <T> buildListOf(vararg elements: T?): List<T> {
         return elements.filterNotNull()
