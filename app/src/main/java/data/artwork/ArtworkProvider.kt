@@ -1,6 +1,6 @@
 package data.artwork
 
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 
 interface ArtworkProvider {
     suspend fun fetchImage(playcut: Playcut): String?

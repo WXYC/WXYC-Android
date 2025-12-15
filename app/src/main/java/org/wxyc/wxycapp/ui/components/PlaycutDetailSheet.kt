@@ -14,20 +14,26 @@ import org.wxyc.wxycapp.data.StreamingService
 
 /**
  * Bottom sheet displaying detailed information about a playcut
- * Includes artwork, metadata, streaming links, and external info links
+ * Follows unidirectional data flow - receives state and callbacks, not ViewModels
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaycutDetailSheet(
     playcut: Playcut,
     artworkUrl: String?,
-    metadata: PlaycutMetadata,
+    metadata: PlaycutMetadata?,
     isLoadingMetadata: Boolean,
+    onFetchMetadata: () -> Unit,
     onDismiss: () -> Unit,
     onStreamingServiceTapped: (StreamingService) -> Unit = {},
     onExternalLinkTapped: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Fetch metadata when sheet is opened
+    LaunchedEffect(playcut.id) {
+        onFetchMetadata()
+    }
+    
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -77,23 +83,25 @@ fun PlaycutDetailSheet(
             // Metadata section (label, year, bio)
             if (isLoadingMetadata) {
                 LoadingSection()
-            } else if (metadata.label != null || metadata.releaseYear != null || metadata.artistBio != null) {
-                PlaycutMetadataSection(metadata = metadata)
+            } else if (metadata?.label != null || metadata?.releaseYear != null || metadata?.artistBio != null) {
+                PlaycutMetadataSection(
+                    metadata = metadata ?: PlaycutMetadata.EMPTY
+                )
             }
             
             // Streaming links
-            if (metadata.hasStreamingLinks || !isLoadingMetadata) {
+            if (metadata?.hasStreamingLinks == true || !isLoadingMetadata) {
                 StreamingLinksSection(
-                    metadata = metadata,
+                    metadata = metadata ?: PlaycutMetadata.EMPTY,
                     isLoading = isLoadingMetadata,
                     onServiceTapped = onStreamingServiceTapped
                 )
             }
             
             // External links (Discogs, Wikipedia)
-            if (metadata.discogsURL != null || metadata.wikipediaURL != null) {
+            if (metadata?.discogsURL != null || metadata?.wikipediaURL != null) {
                 ExternalLinksSection(
-                    metadata = metadata,
+                    metadata = metadata ?: PlaycutMetadata.EMPTY,
                     onLinkTapped = onExternalLinkTapped
                 )
             }

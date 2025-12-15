@@ -19,6 +19,9 @@ object AnalyticsEvents {
     const val FEEDBACK_EMAIL_PRESENTED = "feedback email presented"
     const val FEEDBACK_EMAIL_SENT = "feedback email sent"
     const val PLAYCUT_DETAIL_OPENED = "playcut detail opened"
+    const val PLAYCUT_DETAIL_VIEW_PRESENTED = "playcut detail view presented"
+    const val STREAMING_LINK_TAPPED = "streaming link tapped"
+    const val EXTERNAL_LINK_TAPPED = "external link tapped"
     
     // Integration Events
     const val WIDGET_TIMELINE_GENERATED = "widget timeline generated"

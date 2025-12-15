@@ -31,7 +31,7 @@ import coil.request.ImageRequest
 import org.wxyc.wxycapp.R
 import org.wxyc.wxycapp.ui.theme.SoftWhite
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,21 +40,24 @@ import java.util.TimeZone
 @Composable
 fun PlaylistItem(
     item: Playcut,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     when (item.entryType) {
         "talkset" -> TalksetItem(modifier = modifier)
         "breakpoint" -> BreakpointItem(hour = item.hour, modifier = modifier)
-        else -> SongItem(playcut = item, modifier = modifier)
+        else -> SongItem(playcut = item, modifier = modifier, onClick = onClick)
     }
 }
 
 @Composable
 private fun SongItem(
     playcut: Playcut,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),

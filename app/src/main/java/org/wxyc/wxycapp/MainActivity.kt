@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
                         HorizontalPager(state = pagerState) { page ->
                             when(page) {
                                 0 -> PlayerScreen(
-                                    uiState = uiState,
+                                    viewModel = vm,
                                     onTogglePlayback = { vm.togglePlayback() }
                                 )
                                 1 -> InfoScreen()

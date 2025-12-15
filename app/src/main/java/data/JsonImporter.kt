@@ -1,6 +1,7 @@
 package data
 
 import javax.inject.Inject
+import org.wxyc.wxycapp.data.Playcut
 
 class JsonImporter @Inject constructor(
     private val api: WxycApi

@@ -12,7 +12,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 import data.PlaylistManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.wxyc.wxycapp.analytics.PostHogManager
+import org.wxyc.wxycapp.data.PlaycutMetadata
+import org.wxyc.wxycapp.data.metadata.PlaycutMetadataService
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
@@ -35,10 +37,18 @@ data class PlayerUiState(
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val playlistManager: PlaylistManager
+    private val playlistManager: PlaylistManager,
+    private val metadataService: PlaycutMetadataService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+    
+    // Metadata state
+    private val _metadata = MutableStateFlow<PlaycutMetadata?>(null)
+    val metadata: StateFlow<PlaycutMetadata?> = _metadata.asStateFlow()
+    
+    private val _isLoadingMetadata = MutableStateFlow(false)
+    val isLoadingMetadata: StateFlow<Boolean> = _isLoadingMetadata.asStateFlow()
 
     private val playlistDetailsList: MutableList<Playcut> = CopyOnWriteArrayList()
 
@@ -142,6 +152,24 @@ class PlayerViewModel @Inject constructor(
                         errorMessage = "Failed to load playlist. Check your internet connection."
                     )
                 }
+            }
+        }
+    }
+    
+    fun fetchMetadata(playcut: Playcut) {
+        viewModelScope.launch {
+            try {
+                _isLoadingMetadata.value = true
+                _metadata.value = null
+                
+                val fetchedMetadata = metadataService.fetchMetadata(playcut)
+                
+                _metadata.value = fetchedMetadata
+                _isLoadingMetadata.value = false
+            } catch (e: Exception) {
+                Log.e(TAG, "fetchMetadata: Error fetching metadata", e)
+                _isLoadingMetadata.value = false
+                // Keep metadata as null on error
             }
         }
     }

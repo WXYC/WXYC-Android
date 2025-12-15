@@ -1,6 +1,7 @@
 package data
 
 import javax.inject.Inject
+import org.wxyc.wxycapp.data.Playcut
 import data.artwork.PlaylistImager
 
 // Manages the playlist creation

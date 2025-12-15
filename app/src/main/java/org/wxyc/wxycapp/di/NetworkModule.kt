@@ -71,4 +71,51 @@ object NetworkModule {
             .build()
             .create(LastFmAPI::class.java)
     }
+    
+    // Metadata API Services
+    
+    @Provides
+    @Singleton
+    fun provideDiscogsApiService(@Named("Default") okHttpClient: OkHttpClient): org.wxyc.wxycapp.data.api.DiscogsApiService {
+        return Retrofit.Builder()
+            .baseUrl("https://api.discogs.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(org.wxyc.wxycapp.data.api.DiscogsApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideSpotifyApiService(@Named("Default") okHttpClient: OkHttpClient): org.wxyc.wxycapp.data.api.SpotifyApiService {
+        return Retrofit.Builder()
+            .baseUrl("https://accounts.spotify.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(org.wxyc.wxycapp.data.api.SpotifyApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    @Named("SpotifySearch")
+    fun provideSpotifySearchService(@Named("Default") okHttpClient: OkHttpClient): org.wxyc.wxycapp.data.api.SpotifyApiService {
+        return Retrofit.Builder()
+            .baseUrl("https://api.spotify.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(org.wxyc.wxycapp.data.api.SpotifyApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideITunesApiService(@Named("Default") okHttpClient: OkHttpClient): org.wxyc.wxycapp.data.api.ITunesApiService {
+        return Retrofit.Builder()
+            .baseUrl("https://itunes.apple.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(org.wxyc.wxycapp.data.api.ITunesApiService::class.java)
+    }
 }

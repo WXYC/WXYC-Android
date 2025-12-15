@@ -1,7 +1,7 @@
 package data.artwork
 
 import android.util.Log
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 import data.artwork.discogs.DiscogsArtistArtworkProvider
 import data.artwork.discogs.DiscogsArtworkProvider
 import data.artwork.itunes.ItunesArtworkProvider

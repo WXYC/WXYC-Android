@@ -2,7 +2,7 @@ package data.artwork.itunes
 
 import android.util.Log
 import com.google.gson.Gson
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 import data.artwork.ArtworkProvider
 import data.artwork.itunes.ITunesResults
 import javax.inject.Inject

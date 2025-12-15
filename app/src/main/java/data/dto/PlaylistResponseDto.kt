@@ -1,6 +1,6 @@
 package data.dto
 
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 
 data class PlaylistResponseDto(
     val id: Int,

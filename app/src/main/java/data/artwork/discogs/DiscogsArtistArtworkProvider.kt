@@ -2,7 +2,7 @@ package data.artwork.discogs
 
 import android.util.Log
 import com.google.gson.Gson
-import data.Playcut
+import org.wxyc.wxycapp.data.Playcut
 import data.artwork.ArtworkProvider
 import org.wxyc.wxycapp.BuildConfig
 import javax.inject.Inject
