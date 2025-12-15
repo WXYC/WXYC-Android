@@ -37,6 +37,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 
 @Composable
 fun PlaylistItem(
@@ -124,6 +126,16 @@ private fun SongItem(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            
+            // Info indicator
+            androidx.compose.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Outlined.Info,
+                contentDescription = "Details",
+                tint = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier
+                    .padding(start = 8.dp, end = 4.dp)
+                    .size(24.dp) // Standard icon size
+            )
         }
     }
 }
