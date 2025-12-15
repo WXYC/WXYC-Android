@@ -1,0 +1,52 @@
+[
+    {
+        "key": "cmd+shift+b",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Build Debug"
+    },
+    {
+        "key": "cmd+shift+r",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Install and Run"
+    },
+    {
+        "key": "cmd+shift+i",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Install Debug"
+    },
+    {
+        "key": "cmd+shift+c",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Clean Build"
+    },
+    {
+        "key": "cmd+shift+l",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: View Logs (Filtered)"
+    },
+    {
+        "key": "cmd+shift+t",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Run Unit Tests"
+    },
+    {
+        "key": "cmd+shift+d",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: List Devices"
+    },
+    {
+        "key": "cmd+shift+k",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Stop App"
+    },
+    {
+        "key": "cmd+shift+x",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Clear App Data"
+    },
+    {
+        "key": "cmd+shift+s",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Android: Take Screenshot"
+    }
+]

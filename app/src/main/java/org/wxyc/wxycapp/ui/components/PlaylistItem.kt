@@ -1,5 +1,6 @@
 package org.wxyc.wxycapp.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,22 +71,34 @@ private fun SongItem(
                 .padding(12.dp), // iOS padding 12.0
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(playcut.imageURL?.takeIf { it.isNotEmpty() })
-                    .crossfade(true)
-                    .build(),
-                contentDescription = "Album art for ${playcut.songTitle}",
-                placeholder = painterResource(id = R.drawable.wxyc_placeholder),
-                error = painterResource(id = R.drawable.wxyc_placeholder),
-                fallback = painterResource(id = R.drawable.wxyc_placeholder),
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
                     .weight(0.4f)
                     .aspectRatio(1f)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)) // iOS cornerRadius 6.0
                     .background(Color.Gray.copy(alpha = 0.3f))
-            )
+            ) {
+                // Background logo (always shown) - White VectorDrawable
+                Image(
+                    painter = painterResource(id = R.drawable.wxyc_logo_white),
+                    contentDescription = "WXYC Logo",
+                    modifier = Modifier
+                        .matchParentSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+                
+                // Album art overlay (shown when available)
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(playcut.imageURL?.takeIf { it.isNotEmpty() })
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Album art for ${playcut.songTitle}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 

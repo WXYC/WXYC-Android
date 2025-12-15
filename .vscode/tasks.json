@@ -1,0 +1,290 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Android: Select Device",
+            "type": "shell",
+            "command": "./.vscode/select-device.sh",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Install and Run (Physical Device)",
+            "type": "shell",
+            "command": "./gradlew installDebug && adb -s R95N9090TLD shell am start -n org.wxyc.wxycapp/.MainActivity",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Install and Run (Emulator)",
+            "type": "shell",
+            "command": "./gradlew installDebug && adb -s emulator-5554 shell am start -n org.wxyc.wxycapp/.MainActivity",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Build Debug",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "assembleDebug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Install Debug",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "installDebug"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Install and Run",
+            "type": "shell",
+            "command": "./gradlew installDebug && adb shell am start -n org.wxyc.wxycapp/.MainActivity",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Clean Build",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "clean"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Full Rebuild",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "clean",
+                "build"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Run Unit Tests",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "test"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Run Lint",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "lint"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: View Logs (Filtered)",
+            "type": "shell",
+            "command": "adb logcat -v time | grep -E 'WXYC|AndroidRuntime'",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: View All Logs",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "logcat",
+                "-v",
+                "time"
+            ],
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Clear Logs",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "logcat",
+                "-c"
+            ],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: List Devices",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "devices",
+                "-l"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Uninstall App",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "uninstall",
+                "org.wxyc.wxycapp"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Clear App Data",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "shell",
+                "pm",
+                "clear",
+                "org.wxyc.wxycapp"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Take Screenshot",
+            "type": "shell",
+            "command": "adb exec-out screencap -p > ~/Desktop/screenshot-$(date +%Y%m%d-%H%M%S).png && echo 'Screenshot saved to Desktop'",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Build Release",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "assembleRelease"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                "$gradle"
+            ]
+        },
+        {
+            "label": "Android: Stop App",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "shell",
+                "am",
+                "force-stop",
+                "org.wxyc.wxycapp"
+            ],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Android: Restart App",
+            "type": "shell",
+            "command": "adb shell am force-stop org.wxyc.wxycapp && adb shell am start -n org.wxyc.wxycapp/.MainActivity",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

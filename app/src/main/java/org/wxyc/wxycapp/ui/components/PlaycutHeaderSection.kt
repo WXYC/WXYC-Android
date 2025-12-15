@@ -12,7 +12,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import org.wxyc.wxycapp.data.Playcut
 
 /**
@@ -32,32 +34,29 @@ fun PlaycutHeaderSection(
             .padding(top = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Artwork
-        if (artworkUrl != null) {
+        // Artwork with WXYC logo background
+        Box(
+            modifier = Modifier
+                .size(280.dp)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            // Background logo (always shown) - White VectorDrawable
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = org.wxyc.wxycapp.R.drawable.wxyc_logo_white),
+                contentDescription = "WXYC Logo",
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(32.dp),
+                contentScale = ContentScale.Fit
+            )
+            
+            // Album art overlay (shown when available)
             AsyncImage(
                 model = artworkUrl,
                 contentDescription = "Album artwork",
-                modifier = Modifier
-                    .size(280.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
             )
-        } else {
-            // Placeholder for missing artwork
-            Surface(
-                modifier = Modifier
-                    .size(280.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                color = Color.White.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No Artwork",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                }
-            }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
