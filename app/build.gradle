@@ -50,7 +50,15 @@ android {
     
     lint {
         checkReleaseBuilds false
-        abortOnError false
+        // The CI gate is only real if lint can fail the build. Pre-CI debt
+        // (10 UnsafeOptInUsageError findings as of 2026-08-13) is frozen in
+        // lint-baseline.xml so only NEW findings redden a PR — the baseline
+        // file keeps the frozen set visible instead of suppressed.
+        abortOnError true
+        baseline = file('lint-baseline.xml')
+        // Findings must reach the CI console; the HTML report only exists
+        // in the uploaded artifact.
+        textReport true
         warningsAsErrors false
         disable 'MissingTranslation', 'NotificationPermission'
     }
@@ -65,6 +73,16 @@ android {
     testOptions {
         unitTests.returnDefaultValues = true
     }
+}
+
+// Pin the JDK Gradle compiles and runs tests on, not just the bytecode
+// level: compileOptions/kotlinOptions govern -target, while unit tests run
+// on the daemon's JDK — a developer machine with a newer JAVA_HOME diverges
+// from CI's Temurin 17 (Mockito/Byte Buddy fail outright on JDKs newer than
+// they support). The foojay resolver in settings.gradle auto-provisions 17
+// when it isn't installed locally.
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
