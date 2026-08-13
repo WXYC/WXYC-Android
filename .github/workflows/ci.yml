@@ -5,9 +5,22 @@ on:
   push:
     branches: [master]
 
+# The job executes arbitrary code from the PR head — Gradle build scripts,
+# kapt/Hilt annotation processors, and third-party dependencies resolved
+# from jitpack.io including a dynamic com.posthog:posthog-android:3.+
+# version that can change upstream without a commit here — so it must
+# never see a writable token. Read-only contents is all a test job needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -25,3 +38,17 @@ jobs:
 
       - name: Run lint
         run: ./gradlew :app:lintDebug
+
+      # Lint's textReport prints findings to this log, but the HTML/XML
+      # detail (and the JUnit XML with real stack traces on a test
+      # failure) exists only on the runner — upload it or lose it.
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

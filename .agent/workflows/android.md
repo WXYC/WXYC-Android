@@ -46,17 +46,17 @@ adb logcat -v time | grep -E "WXYC|AndroidRuntime"
 ```
 
 ## 5. Run Unit Tests
-Run all unit tests in the project.
+Run the unit tests the CI gate runs (`.github/workflows/ci.yml` uses this exact task — keep them in sync).
 // turbo
 ```bash
-cd /Users/jake/Developer/WXYC-Android && ./gradlew test
+cd /Users/jake/Developer/WXYC-Android && ./gradlew :app:testDebugUnitTest
 ```
 
 ## 6. Run Lint Checks
-Run Android lint to check for code quality issues.
+Run the lint task the CI gate runs (same task as `.github/workflows/ci.yml`; findings not in `app/lint-baseline.xml` fail the build).
 // turbo
 ```bash
-cd /Users/jake/Developer/WXYC-Android && ./gradlew lint
+cd /Users/jake/Developer/WXYC-Android && ./gradlew :app:lintDebug
 ```
 
 ## 7. Uninstall App
