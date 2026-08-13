@@ -16,6 +16,7 @@ val SoftWhite = Color(0xFFF3F4F5)
 val GreenButton = Color(0xFF34C759)
 val BlueButton = Color(0xFF007AFF)
 val RedButton = Color(0xFFFF0000)
+val YellowButton = Color(0xFFFFCC00)
 
 private val DarkColorScheme = darkColorScheme(
     primary = BlueButton,

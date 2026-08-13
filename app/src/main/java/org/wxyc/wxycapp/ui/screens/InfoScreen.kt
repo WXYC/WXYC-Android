@@ -42,6 +42,7 @@ import org.wxyc.wxycapp.ui.theme.BlueButton
 import org.wxyc.wxycapp.ui.theme.GreenButton
 import org.wxyc.wxycapp.ui.theme.RedButton
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.ui.theme.YellowButton
 
 @Composable
 fun InfoScreen(
@@ -123,6 +124,21 @@ fun InfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Send us feedback on the app", color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+                    val donateIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://wxyc.org/donate")
+                    }
+                    context.startActivity(donateIntent)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = YellowButton),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Donate", color = Color.Black)
             }
         }
     }
