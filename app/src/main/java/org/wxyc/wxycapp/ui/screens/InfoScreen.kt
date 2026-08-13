@@ -42,6 +42,7 @@ import org.wxyc.wxycapp.ui.theme.BlueButton
 import org.wxyc.wxycapp.ui.theme.GreenButton
 import org.wxyc.wxycapp.ui.theme.RedButton
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
+import org.wxyc.wxycapp.util.launchIntentSafely
 
 @Composable
 fun InfoScreen(
@@ -92,7 +93,7 @@ fun InfoScreen(
                     val dialIntent = Intent(Intent.ACTION_DIAL).apply {
                         data = Uri.parse("tel:9199628989")
                     }
-                    context.startActivity(dialIntent)
+                    launchIntentSafely(context, dialIntent, "No phone app found")
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = GreenButton),
                 modifier = Modifier.fillMaxWidth()
@@ -117,7 +118,7 @@ fun InfoScreen(
                     val feedbackIntent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:feedback@wxyc.org?subject=Feedback%20on%20the%20WXYC%20Android%20app")
                     }
-                    context.startActivity(feedbackIntent)
+                    launchIntentSafely(context, feedbackIntent, "No email app found")
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = RedButton),
                 modifier = Modifier.fillMaxWidth()
