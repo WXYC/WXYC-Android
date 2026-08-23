@@ -50,7 +50,14 @@ class AudioPlaybackService : MediaSessionService() {
 
     companion object {
         private const val TAG = "AudioPlaybackService"
-        private const val STREAM_URL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
+        /**
+         * The 128 kbps mount, over TLS. This is the same stream the iOS app and
+         * the Alexa skill play, and the one the station points listeners at.
+         *
+         * Not the 320 kbps `wxyc-alt.mp3` mount: at 144 MB/hour it is a poor
+         * default over cellular, and Android was its only real consumer.
+         */
+        private const val STREAM_URL = "https://audio-mp3.ibiblio.org/wxyc.mp3"
     }
 
     @OptIn(UnstableApi::class)
