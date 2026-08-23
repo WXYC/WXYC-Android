@@ -1,7 +1,5 @@
 package playback
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -60,16 +58,10 @@ class AudioPlaybackService : MediaSessionService() {
         super.onCreate()
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "AudioPlaybackChannel"
-            val channel = NotificationChannel(
-                channelId,
-                "WXYC Stream",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
-        }
+        // No notification channel is created here on purpose. MediaSessionService
+        // installs a DefaultMediaNotificationProvider when the app doesn't set one,
+        // and that provider creates and owns its own IMPORTANCE_LOW channel. The
+        // channel this service used to declare was never attached to anything.
 
         initializePlayer()
         registerNetworkCallback()
@@ -269,6 +261,22 @@ class AudioPlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
+    }
+
+    /**
+     * Keeps the service in the foreground while a reconnect is pending.
+     *
+     * media3 decides foreground state from `shouldRunInForeground`, which requires
+     * the player to be READY or BUFFERING. A dropped stream parks it in ENDED (or
+     * IDLE after an error), so media3 would call `stopForeground` — the lock-screen
+     * player disappears and Android is then free to kill the service, taking the
+     * queued reconnect with it. That is the symptom users report. The listener still
+     * wants audio during recovery, so hold the foreground until it succeeds or they
+     * pause.
+     */
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        val recovering = userWantsPlayback && pendingReconnect != null
+        super.onUpdateNotification(session, startInForegroundRequired || recovering)
     }
 
     override fun onDestroy() {
