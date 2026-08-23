@@ -17,10 +17,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import org.wxyc.wxycapp.MainActivity
@@ -92,7 +94,18 @@ class AudioPlaybackService : MediaSessionService() {
             }
         }
 
+        // Recover from dropped connections underneath ExoPlayer rather than
+        // reacting to STATE_ENDED, which only arrives once the audio has already
+        // run out. See ReconnectingDataSource.
+        val dataSourceFactory = ReconnectingDataSource.Factory(
+            DefaultHttpDataSource.Factory()
+                .setAllowCrossProtocolRedirects(true)
+                .setConnectTimeoutMs(8_000)
+                .setReadTimeoutMs(8_000)
+        )
+
         exoPlayer = ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
