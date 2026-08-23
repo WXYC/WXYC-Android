@@ -6,8 +6,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.wifi.WifiManager
+import android.net.Network
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -22,14 +26,34 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import org.wxyc.wxycapp.MainActivity
-import org.wxyc.wxycapp.R
+import org.wxyc.wxycapp.analytics.AnalyticsEvents
+import org.wxyc.wxycapp.analytics.PostHogManager
 
 class AudioPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var exoPlayer: ExoPlayer? = null
-    private var wifiLock: WifiManager.WifiLock? = null
     private lateinit var connectivityManager: ConnectivityManager
+
+    private val reconnectPolicy = StreamReconnectPolicy()
+    private val handler = Handler(Looper.getMainLooper())
+    private var pendingReconnect: Runnable? = null
+
+    /**
+     * Whether the listener currently wants audio. Reconnects are only attempted
+     * while this holds, so a deliberate pause is never undone by the recovery path.
+     */
+    private var userWantsPlayback = false
+
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    /** Elapsed-realtime stamp of when audio last started flowing; 0 when stopped. */
+    private var playingSinceMs = 0L
+
+    companion object {
+        private const val TAG = "AudioPlaybackService"
+        private const val STREAM_URL = "http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3"
+    }
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -48,6 +72,7 @@ class AudioPlaybackService : MediaSessionService() {
         }
 
         initializePlayer()
+        registerNetworkCallback()
     }
 
     @OptIn(UnstableApi::class)
@@ -76,31 +101,71 @@ class AudioPlaybackService : MediaSessionService() {
                     .build(),
                 true
             )
+            // WAKE_MODE_NETWORK already holds both a partial wake lock and a
+            // WIFI_MODE_FULL_HIGH_PERF WifiLock for us (see media3's
+            // WifiLockManager), so the service must not manage one itself.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setHandleAudioBecomingNoisy(true)
             .build()
 
         exoPlayer?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                 if (isPlaying) {
-                    acquireWifiLock()
-                } else {
-                    releaseWifiLock()
-                }
+                playingSinceMs = if (isPlaying) SystemClock.elapsedRealtime() else 0L
                 updateVisualizerMuteState()
             }
-            
+
             override fun onVolumeChanged(volume: Float) {
                 updateVisualizerMuteState()
             }
 
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                userWantsPlayback = playWhenReady
+                if (!playWhenReady) {
+                    // A deliberate pause: drop any queued reconnect and clear the
+                    // backoff so the next tap reconnects immediately.
+                    cancelPendingReconnect()
+                    reconnectPolicy.onStreamHealthy()
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        if (reconnectPolicy.attemptCount > 0) {
+                            PostHogManager.capture(
+                                AnalyticsEvents.STREAM_RECONNECTED,
+                                mapOf("attempts" to reconnectPolicy.attemptCount)
+                            )
+                        }
+                        // The backoff is not cleared here: reaching READY only means
+                        // the mount accepted us. Sustained playback clears it, in
+                        // scheduleReconnect below.
+                        cancelPendingReconnect()
+                    }
+
+                    Player.STATE_ENDED -> {
+                        // A live stream never legitimately ends. Reaching ENDED means
+                        // the Icecast server closed the connection and ExoPlayer read
+                        // it as a clean end of input, which raises no error.
+                        scheduleReconnect("stream_ended")
+                    }
+
+                    else -> Unit
+                }
+            }
+
             override fun onPlayerError(error: PlaybackException) {
-                // Auto-retry or just stop. ExoPlayer usually stops on error.
+                Log.w(TAG, "Playback error: ${error.errorCodeName}", error)
+                PostHogManager.captureError(
+                    error = error,
+                    context = "AudioPlaybackService.onPlayerError",
+                    additionalData = mapOf("error_code" to error.errorCodeName)
+                )
+                scheduleReconnect(error.errorCodeName)
             }
         })
 
-        val mediaItem = MediaItem.fromUri("http://audio-mp3.ibiblio.org:8000/wxyc-alt.mp3")
-        exoPlayer?.setMediaItem(mediaItem)
+        exoPlayer?.setMediaItem(MediaItem.fromUri(STREAM_URL))
         exoPlayer?.playWhenReady = false
         exoPlayer?.prepare()
 
@@ -116,6 +181,87 @@ class AudioPlaybackService : MediaSessionService() {
             .build()
     }
 
+    /**
+     * Queues a reconnect after the policy's backoff. Any previously queued attempt
+     * is dropped so overlapping signals (an error followed by ENDED, say) can't
+     * stack up into a burst of requests.
+     */
+    private fun scheduleReconnect(reason: String) {
+        val playedForMs =
+            if (playingSinceMs == 0L) 0L else SystemClock.elapsedRealtime() - playingSinceMs
+        playingSinceMs = 0L
+        reconnectPolicy.onPlaybackInterrupted(playedForMs)
+
+        if (!reconnectPolicy.shouldReconnect(userWantsPlayback)) {
+            return
+        }
+
+        cancelPendingReconnect()
+
+        val delayMs = reconnectPolicy.nextDelayMs()
+        Log.i(TAG, "Stream dropped ($reason); reconnecting in ${delayMs}ms")
+        PostHogManager.capture(
+            AnalyticsEvents.STREAM_ERROR,
+            mapOf(
+                "reason" to reason,
+                "attempt" to reconnectPolicy.attemptCount,
+                "delay_ms" to delayMs,
+                "played_for_ms" to playedForMs
+            )
+        )
+
+        val reconnect = Runnable {
+            pendingReconnect = null
+            reconnectNow()
+        }
+        pendingReconnect = reconnect
+        handler.postDelayed(reconnect, delayMs)
+    }
+
+    /**
+     * Rebuilds the media item and re-prepares. A fresh item is required because
+     * a player sitting in ENDED is parked at the end of the old, finished source.
+     */
+    private fun reconnectNow() {
+        val player = exoPlayer ?: return
+        if (!userWantsPlayback) return
+
+        player.setMediaItem(MediaItem.fromUri(STREAM_URL))
+        player.prepare()
+        player.play()
+    }
+
+    private fun cancelPendingReconnect() {
+        pendingReconnect?.let { handler.removeCallbacks(it) }
+        pendingReconnect = null
+    }
+
+    /**
+     * Retries as soon as connectivity returns rather than waiting out the backoff.
+     * The MediaPlayer-based build watched CONNECTIVITY_ACTION for this; the
+     * ExoPlayer rewrite kept the ConnectivityManager field but dropped the watch.
+     */
+    private fun registerNetworkCallback() {
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                handler.post {
+                    if (userWantsPlayback && exoPlayer?.isPlaying != true) {
+                        cancelPendingReconnect()
+                        reconnectPolicy.onStreamHealthy()
+                        reconnectNow()
+                    }
+                }
+            }
+        }
+        networkCallback = callback
+        try {
+            connectivityManager.registerDefaultNetworkCallback(callback)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Unable to watch connectivity; falling back to backoff only", e)
+            networkCallback = null
+        }
+    }
+
     private fun updateVisualizerMuteState() {
         val isMuted = (exoPlayer?.volume ?: 1f) == 0f
         data.audio.AudioVisualizerState.isMuted = isMuted
@@ -126,26 +272,14 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        cancelPendingReconnect()
+        networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
+        networkCallback = null
         mediaSession?.run {
             player.release()
             release()
             mediaSession = null
         }
-        releaseWifiLock()
         super.onDestroy()
-    }
-    
-    private fun acquireWifiLock() {
-        if (wifiLock == null) {
-            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "WXYC:WifiLock")
-        }
-        wifiLock?.acquire()
-    }
-
-    private fun releaseWifiLock() {
-        if (wifiLock?.isHeld == true) {
-            wifiLock?.release()
-        }
     }
 }

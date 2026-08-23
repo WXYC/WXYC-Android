@@ -13,6 +13,12 @@ object AnalyticsEvents {
     // Playback Events
     const val PLAYBACK_PLAY = "play"
     const val PLAYBACK_PAUSE = "pause"
+
+    // Emitted when the live stream drops and when it comes back, so that
+    // unattended playback stops are visible in analytics instead of only
+    // showing up as an unexplained second "play" tap.
+    const val STREAM_ERROR = "stream_error"
+    const val STREAM_RECONNECTED = "stream_reconnected"
     
     // Navigation/UI Events
     const val PARTY_HORN_PRESENTED = "party horn presented"
