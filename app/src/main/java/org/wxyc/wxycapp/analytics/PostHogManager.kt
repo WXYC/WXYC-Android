@@ -102,12 +102,17 @@ object PostHogManager {
     
     /**
      * Track a playback pause event.
+     *
+     * @param durationSeconds seconds of playback since it started, matching the unit the
+     *   iOS app reports into this same PostHog project, or `null` when the start was
+     *   never observed. A `null` omits the property rather than substituting a value,
+     *   because anything substituted here is averaged in as if it were a real listen.
      */
-    fun capturePause(source: String, duration: Long, reason: String = "") {
-        val properties = mutableMapOf<String, Any>(
-            "source" to source,
-            "duration" to duration
-        )
+    fun capturePause(source: String, durationSeconds: Double?, reason: String = "") {
+        val properties = mutableMapOf<String, Any>("source" to source)
+        if (durationSeconds != null) {
+            properties["duration"] = durationSeconds
+        }
         if (reason.isNotBlank()) {
             properties["reason"] = reason
         }
