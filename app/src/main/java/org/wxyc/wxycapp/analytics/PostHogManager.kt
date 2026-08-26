@@ -89,34 +89,38 @@ object PostHogManager {
     
     /**
      * Track a playback play event.
+     *
+     * @param attribution the surface that started playback. Typed rather than a free
+     *   string so that a call-site name can't reach `source`, which iOS populates from
+     *   a closed enum in the same shared breakdown.
+     * @param sessionId the per-listen identifier this play begins.
      */
-    fun capturePlay(source: String, reason: String) {
+    fun capturePlay(attribution: PlaybackAttribution, sessionId: String?) {
         capture(
             AnalyticsEvents.PLAYBACK_PLAY,
-            mapOf(
-                "source" to source,
-                "reason" to reason
-            )
+            PlaybackEventProperties.build(attribution, durationSeconds = null, sessionId = sessionId)
         )
     }
     
     /**
      * Track a playback pause event.
      *
+     * @param attribution the surface that stopped playback.
      * @param durationSeconds seconds of playback since it started, matching the unit the
      *   iOS app reports into this same PostHog project, or `null` when the start was
      *   never observed. A `null` omits the property rather than substituting a value,
      *   because anything substituted here is averaged in as if it were a real listen.
+     * @param sessionId the per-listen identifier this pause closes.
      */
-    fun capturePause(source: String, durationSeconds: Double?, reason: String = "") {
-        val properties = mutableMapOf<String, Any>("source" to source)
-        if (durationSeconds != null) {
-            properties["duration"] = durationSeconds
-        }
-        if (reason.isNotBlank()) {
-            properties["reason"] = reason
-        }
-        capture(AnalyticsEvents.PLAYBACK_PAUSE, properties)
+    fun capturePause(
+        attribution: PlaybackAttribution,
+        durationSeconds: Double?,
+        sessionId: String?
+    ) {
+        capture(
+            AnalyticsEvents.PLAYBACK_PAUSE,
+            PlaybackEventProperties.build(attribution, durationSeconds, sessionId)
+        )
     }
     
     /**
