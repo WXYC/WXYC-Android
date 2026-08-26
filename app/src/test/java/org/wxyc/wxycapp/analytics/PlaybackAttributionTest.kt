@@ -30,21 +30,11 @@ class PlaybackAttributionTest {
     }
 
     @Test
-    fun `Android Auto collapses into remote rather than claiming its own surface`() {
-        // iOS collapses Lock Screen, Control Center and CarPlay's built-in transport
-        // into `remote` because MPRemoteCommandCenter cannot tell them apart. The same
-        // principle applies here: a case with no distinguishing signal behind it
-        // over-claims precision. See PlaybackSource.swift's `lockScreen` doc comment.
-        val attribution = PlaybackAttribution.resolve(
-            Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-            CommandOrigin.ANDROID_AUTO
-        )
-
-        assertEquals(PlaybackSource.REMOTE, attribution.source)
-    }
-
-    @Test
     fun `an unrecognised controller attributes to remote, not app`() {
+        // Headsets, Bluetooth transports, Assistant and Android Auto all land here.
+        // iOS collapses Lock Screen, Control Center and CarPlay's built-in transport
+        // into `remote` for the same reason: a case with no distinguishing signal
+        // behind it over-claims precision. See PlaybackSource.swift's `lockScreen`.
         val attribution = PlaybackAttribution.resolve(
             Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
             CommandOrigin.OTHER_CONTROLLER
@@ -95,20 +85,6 @@ class PlaybackAttributionTest {
 
         assertEquals(PlaybackSource.AUTO, attribution.source)
         assertEquals("suppressed too long", attribution.reason)
-    }
-
-    @Test
-    fun `a reconnect resumes automatically rather than looking like a user tap`() {
-        // reconnectNow() calls play() straight on the player, so no controller command
-        // is issued and the origin would otherwise be unattributable. Without this,
-        // every recovered stream drop would inflate the user-initiated play count.
-        val attribution = PlaybackAttribution.resolve(
-            Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-            CommandOrigin.AUTOMATIC_RECONNECT
-        )
-
-        assertEquals(PlaybackSource.AUTO, attribution.source)
-        assertEquals("resume after stream reconnect", attribution.reason)
     }
 
     @Test

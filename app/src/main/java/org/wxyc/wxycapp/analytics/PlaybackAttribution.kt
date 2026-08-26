@@ -18,17 +18,13 @@ enum class CommandOrigin {
     /** The media notification or lock-screen transport controls. */
     MEDIA_NOTIFICATION,
 
-    /** Android Auto or Automotive. */
-    ANDROID_AUTO,
-
-    /** A connected controller this app doesn't recognise, e.g. a headset or Assistant. */
-    OTHER_CONTROLLER,
-
     /**
-     * Not a controller at all: the service's own reconnect path calling `play()`
-     * straight on the player after the stream dropped.
+     * A connected controller this app doesn't recognise: a headset or Bluetooth
+     * transport button, Assistant, or Android Auto. Auto has no case of its own
+     * because the app declares no Auto support, so an Auto controller cannot reach
+     * this session — see [PlaybackSource.REMOTE].
      */
-    AUTOMATIC_RECONNECT
+    OTHER_CONTROLLER
 }
 
 /**
@@ -73,10 +69,7 @@ data class PlaybackAttribution(val source: PlaybackSource, val reason: String?) 
         private fun fromOrigin(origin: CommandOrigin?): PlaybackAttribution = when (origin) {
             CommandOrigin.IN_APP -> PlaybackAttribution(PlaybackSource.APP, null)
             CommandOrigin.MEDIA_NOTIFICATION -> PlaybackAttribution(PlaybackSource.REMOTE, null)
-            CommandOrigin.ANDROID_AUTO -> PlaybackAttribution(PlaybackSource.REMOTE, null)
             CommandOrigin.OTHER_CONTROLLER -> PlaybackAttribution(PlaybackSource.REMOTE, null)
-            CommandOrigin.AUTOMATIC_RECONNECT ->
-                PlaybackAttribution(PlaybackSource.AUTO, "resume after stream reconnect")
             null -> PlaybackAttribution(PlaybackSource.UNKNOWN, null)
         }
     }
