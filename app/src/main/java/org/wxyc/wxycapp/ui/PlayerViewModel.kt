@@ -2,7 +2,6 @@ package org.wxyc.wxycapp.ui
 
 import android.content.ComponentName
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.wxyc.wxycapp.analytics.PlaybackDurationTracker
 import org.wxyc.wxycapp.analytics.PostHogManager
 import org.wxyc.wxycapp.data.PlaycutMetadata
 import org.wxyc.wxycapp.data.metadata.PlaycutMetadataService
@@ -56,7 +54,6 @@ class PlayerViewModel @Inject constructor(
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
-    private val durationTracker = PlaybackDurationTracker(SystemClock::elapsedRealtime)
 
     companion object {
         private const val TAG = "PlayerViewModel"
@@ -74,14 +71,6 @@ class PlayerViewModel @Inject constructor(
                 controller = controllerFuture?.get()
                 controller?.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        // Driven off the player rather than the in-app button so that
-                        // playback started from the media notification or a headset
-                        // button is timed too, instead of pausing against no start.
-                        if (isPlaying) {
-                            durationTracker.onPlaybackStarted()
-                        } else {
-                            durationTracker.onPlaybackStopped()
-                        }
                         _uiState.update { it.copy(isPlaying = isPlaying, isMuted = !isPlaying) }
                     }
 
@@ -105,24 +94,21 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Toggles playback.
+     *
+     * Emits no analytics itself. `play` / `pause` are captured in
+     * `AudioPlaybackService`, which sees commands from the media notification, headset
+     * buttons and the reconnect path as well as this one — capturing here counted only
+     * the in-app control and left `source` with a single value (WXYC-Android#48). The
+     * command reaches the service through the session, where it is attributed to
+     * `CommandOrigin.IN_APP`.
+     */
     fun togglePlayback() {
         controller?.let {
             if (it.isPlaying) {
-                // Pause the player. Captured before pausing, while the tracker still
-                // holds the start that onIsPlayingChanged is about to clear.
-                PostHogManager.capturePause(
-                    source = "PlayerViewModel.togglePlayback",
-                    durationSeconds = durationTracker.durationSeconds(),
-                    reason = "User toggled playback"
-                )
                 it.pause()
             } else {
-                // Play the player. The start is stamped by onIsPlayingChanged, when
-                // playback actually begins rather than when the tap is handled.
-                PostHogManager.capturePlay(
-                    source = "PlayerViewModel.togglePlayback",
-                    reason = "User toggled playback"
-                )
                 it.play()
             }
         }

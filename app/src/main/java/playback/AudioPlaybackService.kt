@@ -23,9 +23,14 @@ import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionResult
 import org.wxyc.wxycapp.MainActivity
 import org.wxyc.wxycapp.analytics.AnalyticsEvents
+import org.wxyc.wxycapp.analytics.CommandOrigin
+import org.wxyc.wxycapp.analytics.PlaybackAttribution
+import org.wxyc.wxycapp.analytics.PlaybackDurationTracker
 import org.wxyc.wxycapp.analytics.PostHogManager
+import java.util.UUID
 
 class AudioPlaybackService : MediaSessionService() {
 
@@ -47,6 +52,26 @@ class AudioPlaybackService : MediaSessionService() {
 
     /** Elapsed-realtime stamp of when audio last started flowing; 0 when stopped. */
     private var playingSinceMs = 0L
+
+    /**
+     * Times the listen reported as `pause.duration`. Driven from playback *intent*
+     * rather than audio flow, matching what iOS reports: a stall mid-listen doesn't
+     * split one listen into two.
+     */
+    private val durationTracker = PlaybackDurationTracker(SystemClock::elapsedRealtime)
+
+    /**
+     * The per-listen identifier (`session_id`) shared by a `play` and the `pause` that
+     * closes it. Null between listens.
+     */
+    private var sessionId: String? = null
+
+    /**
+     * Where the in-flight play/pause command came from, recorded in
+     * `onPlayerCommandRequest` while the issuing controller is still known and consumed
+     * by `onPlayWhenReadyChanged`, which only sees a reason code.
+     */
+    private var pendingOrigin: CommandOrigin? = null
 
     companion object {
         private const val TAG = "AudioPlaybackService"
@@ -119,6 +144,7 @@ class AudioPlaybackService : MediaSessionService() {
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 userWantsPlayback = playWhenReady
+                reportPlaybackIntentChange(playWhenReady, reason)
                 if (!playWhenReady) {
                     // A deliberate pause: drop any queued reconnect and clear the
                     // backoff so the next tap reconnects immediately.
@@ -177,7 +203,71 @@ class AudioPlaybackService : MediaSessionService() {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
+            .setCallback(object : MediaSession.Callback {
+                override fun onPlayerCommandRequest(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    playerCommand: Int
+                ): Int {
+                    if (playerCommand == Player.COMMAND_PLAY_PAUSE) {
+                        pendingOrigin = originOf(session, controller)
+                    }
+                    return SessionResult.RESULT_SUCCESS
+                }
+            })
             .build()
+    }
+
+    /**
+     * Identifies the controller behind a transport command.
+     *
+     * This runs while the issuing controller is still known. By the time the player
+     * reports the change, the only signal left is a reason code that reads
+     * `USER_REQUEST` for the in-app button and the notification alike, so attribution
+     * has to be captured here or not at all.
+     */
+    @OptIn(UnstableApi::class)
+    private fun originOf(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ): CommandOrigin = when {
+        session.isMediaNotificationController(controller) -> CommandOrigin.MEDIA_NOTIFICATION
+        session.isAutomotiveController(controller) -> CommandOrigin.ANDROID_AUTO
+        session.isAutoCompanionController(controller) -> CommandOrigin.ANDROID_AUTO
+        controller.packageName == packageName -> CommandOrigin.IN_APP
+        else -> CommandOrigin.OTHER_CONTROLLER
+    }
+
+    /**
+     * Emits `play` / `pause` for a change in playback intent.
+     *
+     * Lives here rather than in the play/pause button's view model so that playback
+     * started from the notification, a headset button, or the reconnect path is counted
+     * too. Instrumenting only the in-app control left `source` with a single value and
+     * left Android's `play` count meaning something narrower than the identically-named
+     * iOS event (WXYC-Android#48).
+     *
+     * Driven by `playWhenReady` — intent — rather than `isPlaying`, so a stall or a
+     * rebuffer doesn't manufacture a spurious pause/play pair.
+     */
+    private fun reportPlaybackIntentChange(playWhenReady: Boolean, reason: Int) {
+        val attribution = PlaybackAttribution.resolve(reason, pendingOrigin)
+        pendingOrigin = null
+
+        if (playWhenReady) {
+            sessionId = UUID.randomUUID().toString()
+            durationTracker.onPlaybackStarted()
+            PostHogManager.capturePlay(attribution, sessionId)
+        } else {
+            // No session means nothing was ever started — e.g. the initial
+            // playWhenReady = false during setup. Reporting a pause there would invent
+            // a listen that never happened.
+            if (sessionId == null) return
+
+            PostHogManager.capturePause(attribution, durationTracker.durationSeconds(), sessionId)
+            durationTracker.onPlaybackStopped()
+            sessionId = null
+        }
     }
 
     /**
@@ -225,6 +315,10 @@ class AudioPlaybackService : MediaSessionService() {
         val player = exoPlayer ?: return
         if (!userWantsPlayback) return
 
+        // Marked before play() because this path calls the player directly, so no
+        // controller command is issued and the change would otherwise be
+        // unattributable. Without it every recovered drop reads as a user tap.
+        pendingOrigin = CommandOrigin.AUTOMATIC_RECONNECT
         player.setMediaItem(MediaItem.fromUri(STREAM_URL))
         player.prepare()
         player.play()
