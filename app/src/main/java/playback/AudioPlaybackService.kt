@@ -231,9 +231,11 @@ class AudioPlaybackService : MediaSessionService() {
         session: MediaSession,
         controller: MediaSession.ControllerInfo
     ): CommandOrigin = when {
+        // The notification check must stay ahead of the package comparison and is not
+        // reorderable: the media notification controller runs in this app's own
+        // process and reports this app's package name, so the package test alone
+        // would read every notification tap as an in-app tap.
         session.isMediaNotificationController(controller) -> CommandOrigin.MEDIA_NOTIFICATION
-        session.isAutomotiveController(controller) -> CommandOrigin.ANDROID_AUTO
-        session.isAutoCompanionController(controller) -> CommandOrigin.ANDROID_AUTO
         controller.packageName == packageName -> CommandOrigin.IN_APP
         else -> CommandOrigin.OTHER_CONTROLLER
     }
@@ -315,10 +317,15 @@ class AudioPlaybackService : MediaSessionService() {
         val player = exoPlayer ?: return
         if (!userWantsPlayback) return
 
-        // Marked before play() because this path calls the player directly, so no
-        // controller command is issued and the change would otherwise be
-        // unattributable. Without it every recovered drop reads as a user tap.
-        pendingOrigin = CommandOrigin.AUTOMATIC_RECONNECT
+        // Deliberately does not stamp an attribution. This path only runs while
+        // userWantsPlayback holds — i.e. playWhenReady is already true — so play()
+        // is a no-op that reports no intent change, and a recovered drop emits no
+        // play/pause at all. That is the intended shape: a stall must not split one
+        // listen into two. Marking an origin here would also be actively unsafe,
+        // because a controller command is queued separately from the callback that
+        // records its origin (MediaSessionStub queues, flushCommandQueue drains), so
+        // a marker written by this timer can be consumed by a user's pause that was
+        // already in flight, reporting it as automatic.
         player.setMediaItem(MediaItem.fromUri(STREAM_URL))
         player.prepare()
         player.play()

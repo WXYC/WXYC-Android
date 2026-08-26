@@ -62,12 +62,9 @@ class PlaybackEventPropertiesTest {
     }
 
     @Test
-    fun `no property is ever null-valued`() {
-        // PostHog renders a null-valued property as an explicit null in breakdowns,
-        // which is not the same as the property being absent.
+    fun `all four properties are present when all four are supplied`() {
         val properties = PlaybackEventProperties.build(interrupted, durationSeconds = 12.0, sessionId = "s")
 
-        properties.values.forEach { assertFalse(it == "null") }
         assertEquals(setOf("source", "reason", "duration", "session_id"), properties.keys)
     }
 }

@@ -28,4 +28,4 @@ After adding the key, rebuild the app to ensure BuildConfig regenerates with the
 
 Then check logcat for these messages:
 - `PostHog initialized successfully` - indicates PostHog started correctly
-- `Event captured: app launch` - indicates the first event was tracked
+- `Event captured: app_launch` - indicates the first event was tracked

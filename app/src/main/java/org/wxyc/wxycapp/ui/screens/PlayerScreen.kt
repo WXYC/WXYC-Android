@@ -73,6 +73,7 @@ fun PlayerScreen(
                             PostHogManager.capture(
                                 AnalyticsEvents.PLAYCUT_DETAIL_VIEW_PRESENTED,
                                 mapOf(
+                                    "song_title" to (item.songTitle ?: ""),
                                     "artist" to (item.artistName ?: ""),
                                     "album" to (item.releaseTitle ?: "")
                                 )
@@ -116,16 +117,22 @@ fun PlayerScreen(
                         AnalyticsEvents.STREAMING_LINK_TAPPED,
                         mapOf(
                             "service" to service.displayName,
+                            "song_title" to (playcut.songTitle ?: ""),
                             "artist" to (playcut.artistName ?: ""),
                             "album" to (playcut.releaseTitle ?: "")
                         )
                     )
                 },
-                onExternalLinkTapped = { url ->
+                // The parameter carries a service name ("Discogs", "Wikipedia"), not a
+                // URL — see ExternalLinksSection. It is written to `service` because
+                // that is the key iOS uses on this same event; a `url` key would leave
+                // the shared breakdown empty for every Android row.
+                onExternalLinkTapped = { service ->
                     PostHogManager.capture(
                         AnalyticsEvents.EXTERNAL_LINK_TAPPED,
                         mapOf(
-                            "url" to url,
+                            "service" to service,
+                            "song_title" to (playcut.songTitle ?: ""),
                             "artist" to (playcut.artistName ?: ""),
                             "album" to (playcut.releaseTitle ?: "")
                         )
