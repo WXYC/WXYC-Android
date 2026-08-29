@@ -1,0 +1,8 @@
+# Local overrides and anything sensitive the scripts produce.
+config.sh
+logs/
+*.jks
+*.keystore
+*.pem
+*.der
+*.aab
