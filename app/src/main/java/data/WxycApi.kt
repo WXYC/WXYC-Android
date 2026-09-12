@@ -6,5 +6,5 @@ import retrofit2.http.Query
 
 interface WxycApi {
     @GET("flowsheet")
-    suspend fun getFlowsheet(@Query("n") limit: Int): FlowsheetResponseDto
+    suspend fun getFlowsheet(@Query("limit") limit: Int): FlowsheetResponseDto
 }
