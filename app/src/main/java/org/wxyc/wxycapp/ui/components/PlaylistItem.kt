@@ -209,11 +209,10 @@ private fun SongItemPreview() {
         SongItem(
             playcut = Playcut(
                 id = 1,
-                entryType = "playcut",
+                entryType = "track",
                 hour = System.currentTimeMillis(),
-                chronOrderID = 1,
+                playOrder = 1,
                 rotation = "",
-                request = "",
                 songTitle = "Sample Song Title",
                 labelName = "Sample Label",
                 artistName = "Sample Artist",

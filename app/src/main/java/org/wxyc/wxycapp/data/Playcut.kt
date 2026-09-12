@@ -4,12 +4,13 @@ data class Playcut(
     val id: Int,
     val entryType: String,
     val hour: Long,
-    val chronOrderID: Int,
+    val showId: Int = 0,
+    val playOrder: Int,
     val rotation: String? = null,
-    val request: String? = null,
     val songTitle: String? = null,
     val labelName: String? = null,
     val artistName: String? = null,
     val releaseTitle: String? = null,
-    var imageURL: String? = null
+    val imageURL: String? = null,
+    val metadata: PlaycutMetadata? = null
 )

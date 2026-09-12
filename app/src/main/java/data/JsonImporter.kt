@@ -8,7 +8,7 @@ class JsonImporter @Inject constructor(
 ) {
     suspend fun fetchPlaylist(): List<Playcut> {
         return try {
-            api.getRecentEntries(35).map { it.toDomain() }
+            api.getFlowsheet(35).entries.map { it.toDomain() }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()

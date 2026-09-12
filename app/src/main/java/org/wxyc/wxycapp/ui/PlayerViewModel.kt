@@ -13,15 +13,13 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.wxyc.wxycapp.data.Playcut
-import data.PlaylistManager
+import data.JsonImporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.wxyc.wxycapp.analytics.PostHogManager
-import org.wxyc.wxycapp.data.PlaycutMetadata
-import org.wxyc.wxycapp.data.metadata.PlaycutMetadataService
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
@@ -37,18 +35,10 @@ data class PlayerUiState(
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val playlistManager: PlaylistManager,
-    private val metadataService: PlaycutMetadataService
+    private val jsonImporter: JsonImporter
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
-    
-    // Metadata state
-    private val _metadata = MutableStateFlow<PlaycutMetadata?>(null)
-    val metadata: StateFlow<PlaycutMetadata?> = _metadata.asStateFlow()
-    
-    private val _isLoadingMetadata = MutableStateFlow(false)
-    val isLoadingMetadata: StateFlow<Boolean> = _isLoadingMetadata.asStateFlow()
 
     private val playlistDetailsList: MutableList<Playcut> = CopyOnWriteArrayList()
 
@@ -122,7 +112,7 @@ class PlayerViewModel @Inject constructor(
                   _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                 }
 
-                val playlist = playlistManager.fetchPlaylist()
+                val playlist = jsonImporter.fetchPlaylist()
                 playlistDetailsList.clear()
                 playlistDetailsList.addAll(playlist)
 
@@ -152,24 +142,6 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
-    fun fetchMetadata(playcut: Playcut) {
-        viewModelScope.launch {
-            try {
-                _isLoadingMetadata.value = true
-                _metadata.value = null
-                
-                val fetchedMetadata = metadataService.fetchMetadata(playcut)
-                
-                _metadata.value = fetchedMetadata
-                _isLoadingMetadata.value = false
-            } catch (e: Exception) {
-                Log.e(TAG, "fetchMetadata: Error fetching metadata", e)
-                _isLoadingMetadata.value = false
-                // Keep metadata as null on error
-            }
-        }
-    }
-
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
