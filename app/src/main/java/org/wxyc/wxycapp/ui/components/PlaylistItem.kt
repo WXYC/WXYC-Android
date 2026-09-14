@@ -33,10 +33,6 @@ import org.wxyc.wxycapp.R
 import org.wxyc.wxycapp.ui.theme.SoftWhite
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import org.wxyc.wxycapp.data.Playcut
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 
@@ -46,10 +42,12 @@ fun PlaylistItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    // "track" is the only row type with a detail sheet (see PlayerScreen); every
+    // other entry_type (show_start/show_end/dj_join/dj_leave/talkset/breakpoint/
+    // message) is a marker row rendered from the server's own label text.
     when (item.entryType) {
-        "talkset" -> TalksetItem(modifier = modifier)
-        "breakpoint" -> BreakpointItem(hour = item.hour, modifier = modifier)
-        else -> SongItem(playcut = item, modifier = modifier, onClick = onClick)
+        "track" -> SongItem(playcut = item, modifier = modifier, onClick = onClick)
+        else -> MarkerItem(text = item.displayMessage ?: item.entryType.uppercase(), modifier = modifier)
     }
 }
 
@@ -141,7 +139,8 @@ private fun SongItem(
 }
 
 @Composable
-private fun TalksetItem(
+private fun MarkerItem(
+    text: String,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -151,7 +150,7 @@ private fun TalksetItem(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "TALKSET",
+            text = text.uppercase(),
             color = Color.White,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -163,43 +162,6 @@ private fun TalksetItem(
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         )
     }
-}
-
-@Composable
-private fun BreakpointItem(
-    hour: Long,
-    modifier: Modifier = Modifier
-) {
-    val formattedTime = androidx.compose.runtime.remember(hour) {
-        convertTime(hour)
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = formattedTime.uppercase(),
-            color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .background(
-                    color = Color.Black.copy(alpha = 0.3f),
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-        )
-    }
-}
-
-private fun convertTime(timestampMillis: Long): String {
-    val date = Date(timestampMillis)
-    val formatter = SimpleDateFormat("h a", Locale.getDefault())
-    formatter.timeZone = TimeZone.getTimeZone("America/New_York")
-    return formatter.format(date)
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
@@ -209,11 +171,10 @@ private fun SongItemPreview() {
         SongItem(
             playcut = Playcut(
                 id = 1,
-                entryType = "playcut",
+                entryType = "track",
                 hour = System.currentTimeMillis(),
-                chronOrderID = 1,
+                playOrder = 1,
                 rotation = "",
-                request = "",
                 songTitle = "Sample Song Title",
                 labelName = "Sample Label",
                 artistName = "Sample Artist",
@@ -226,16 +187,8 @@ private fun SongItemPreview() {
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
-private fun TalksetItemPreview() {
+private fun MarkerItemPreview() {
     WXYCTheme {
-        TalksetItem()
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
-@Composable
-private fun BreakpointItemPreview() {
-    WXYCTheme {
-        BreakpointItem(hour = System.currentTimeMillis())
+        MarkerItem(text = "4:00 PM Breakpoint")
     }
 }

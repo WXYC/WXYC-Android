@@ -19,7 +19,6 @@ import org.wxyc.wxycapp.ui.components.PlayerControls
 import org.wxyc.wxycapp.ui.components.PlaycutDetailSheet
 import org.wxyc.wxycapp.ui.theme.WXYCTheme
 import org.wxyc.wxycapp.data.Playcut
-import org.wxyc.wxycapp.data.PlaycutMetadata
 import org.wxyc.wxycapp.analytics.PostHogManager
 import org.wxyc.wxycapp.analytics.AnalyticsEvents
 import org.wxyc.wxycapp.ui.PlayerViewModel
@@ -34,9 +33,7 @@ fun PlayerScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val metadata by viewModel.metadata.collectAsState()
-    val isLoadingMetadata by viewModel.isLoadingMetadata.collectAsState()
-    
+
     var selectedPlaycut by remember { mutableStateOf<Playcut?>(null) }
     var showDetailSheet by remember { mutableStateOf(false) }
 
@@ -65,7 +62,7 @@ fun PlayerScreen(
                 PlaylistItem(
                     item = item,
                     onClick = {
-                        if (item.entryType == "playcut") {
+                        if (item.entryType == "track") {
                             selectedPlaycut = item
                             showDetailSheet = true
                             
@@ -104,10 +101,6 @@ fun PlayerScreen(
         selectedPlaycut?.let { playcut ->
             PlaycutDetailSheet(
                 playcut = playcut,
-                artworkUrl = playcut.imageURL,
-                metadata = metadata,
-                isLoadingMetadata = isLoadingMetadata,
-                onFetchMetadata = { viewModel.fetchMetadata(playcut) },
                 onDismiss = {
                     showDetailSheet = false
                     selectedPlaycut = null

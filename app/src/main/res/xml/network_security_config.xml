@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <!-- The audio stream is HTTPS, so only the legacy playlist API needs this.
-         audio-mp3.ibiblio.org was dropped when the stream moved to TLS. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">wxyc.info</domain>
-    </domain-config>
-</network-security-config>

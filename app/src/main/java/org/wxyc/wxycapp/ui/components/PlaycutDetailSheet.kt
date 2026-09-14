@@ -20,20 +20,14 @@ import org.wxyc.wxycapp.data.StreamingService
 @Composable
 fun PlaycutDetailSheet(
     playcut: Playcut,
-    artworkUrl: String?,
-    metadata: PlaycutMetadata?,
-    isLoadingMetadata: Boolean,
-    onFetchMetadata: () -> Unit,
     onDismiss: () -> Unit,
     onStreamingServiceTapped: (StreamingService) -> Unit = {},
     onExternalLinkTapped: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Fetch metadata when sheet is opened
-    LaunchedEffect(playcut.id) {
-        onFetchMetadata()
-    }
-    
+    val artworkUrl = playcut.imageURL
+    val metadata = playcut.metadata ?: PlaycutMetadata.EMPTY
+
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -81,27 +75,23 @@ fun PlaycutDetailSheet(
             )
             
             // Metadata section (label, year, bio)
-            if (isLoadingMetadata) {
-                LoadingSection()
-            } else if (metadata?.label != null || metadata?.releaseYear != null || metadata?.artistBio != null) {
+            if (metadata.label != null || metadata.releaseYear != null || metadata.artistBio != null) {
                 PlaycutMetadataSection(
-                    metadata = metadata ?: PlaycutMetadata.EMPTY
+                    metadata = metadata
                 )
             }
-            
+
             // Streaming links
-            if (metadata?.hasStreamingLinks == true || !isLoadingMetadata) {
-                StreamingLinksSection(
-                    metadata = metadata ?: PlaycutMetadata.EMPTY,
-                    isLoading = isLoadingMetadata,
-                    onServiceTapped = onStreamingServiceTapped
-                )
-            }
-            
+            StreamingLinksSection(
+                metadata = metadata,
+                isLoading = false,
+                onServiceTapped = onStreamingServiceTapped
+            )
+
             // External links (Discogs, Wikipedia)
-            if (metadata?.discogsURL != null || metadata?.wikipediaURL != null) {
+            if (metadata.discogsURL != null || metadata.wikipediaURL != null) {
                 ExternalLinksSection(
-                    metadata = metadata ?: PlaycutMetadata.EMPTY,
+                    metadata = metadata,
                     onLinkTapped = onExternalLinkTapped
                 )
             }
@@ -109,28 +99,6 @@ fun PlaycutDetailSheet(
             // Bottom spacing
             Spacer(modifier = Modifier.height(40.dp))
         }
-        }
-    }
-}
-
-@Composable
-private fun LoadingSection() {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.1f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            CircularProgressIndicator(
-                color = androidx.compose.ui.graphics.Color.White
-            )
         }
     }
 }

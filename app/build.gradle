@@ -29,12 +29,7 @@ android {
         // Add BuildConfig fields for secrets
         buildConfigField "String", "RAILWAY_ENDPOINT_URL", "\"${secretsProperties.getProperty("RAILWAY_ENDPOINT_URL", "")}\""
         buildConfigField "String", "SLACK_WEBHOOK_BASE_URL", "\"${secretsProperties.getProperty("SLACK_WEBHOOK_BASE_URL", "")}\""
-        buildConfigField "String", "DISCOGS_API_KEY", "\"${secretsProperties.getProperty("DISCOGS_API_KEY", "")}\""
-        buildConfigField "String", "DISCOGS_SECRET_KEY", "\"${secretsProperties.getProperty("DISCOGS_SECRET_KEY", "")}\""
-        buildConfigField "String", "LASTFM_API_KEY", "\"${secretsProperties.getProperty("LASTFM_API_KEY", "")}\""
         buildConfigField "String", "POSTHOG_API_KEY", "\"${secretsProperties.getProperty("POSTHOG_API_KEY", "")}\""
-        buildConfigField "String", "SPOTIFY_CLIENT_ID", "\"${secretsProperties.getProperty("SPOTIFY_CLIENT_ID", "")}\""
-        buildConfigField "String", "SPOTIFY_CLIENT_SECRET", "\"${secretsProperties.getProperty("SPOTIFY_CLIENT_SECRET", "")}\""
     }
 
     buildTypes {
