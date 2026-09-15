@@ -1,6 +1,7 @@
 package org.wxyc.wxycapp.requestline
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import java.util.UUID
 
 /**
@@ -17,7 +18,7 @@ class DeviceFingerprintStore(private val prefs: SharedPreferences) {
             ?.let { return it }
 
         return UUID.randomUUID().toString().also {
-            prefs.edit().putString(KEY, it).apply()
+            prefs.edit { putString(KEY, it) }
         }
     }
 
