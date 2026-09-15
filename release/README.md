@@ -24,7 +24,7 @@ Three scripts take a blank Mac to a signed, submittable `.aab`. Two short web ac
 ## Prerequisites
 
 - macOS.
-- The repo cloned, and `secrets.properties` in the repo root (get it from Jake). The app builds without it, but song requests / artwork / analytics need it.
+- The repo cloned, and `secrets.properties` in the repo root (get it from Jake). The app builds without it, but analytics need it.
 
 ## Passwords
 
