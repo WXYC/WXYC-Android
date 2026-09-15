@@ -27,8 +27,6 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // Add BuildConfig fields for secrets
-        buildConfigField "String", "RAILWAY_ENDPOINT_URL", "\"${secretsProperties.getProperty("RAILWAY_ENDPOINT_URL", "")}\""
-        buildConfigField "String", "SLACK_WEBHOOK_BASE_URL", "\"${secretsProperties.getProperty("SLACK_WEBHOOK_BASE_URL", "")}\""
         buildConfigField "String", "POSTHOG_API_KEY", "\"${secretsProperties.getProperty("POSTHOG_API_KEY", "")}\""
     }
 
@@ -89,6 +87,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1' // used to parse json into objects
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.mockito:mockito-core:5.8.0"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.9.2"
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
