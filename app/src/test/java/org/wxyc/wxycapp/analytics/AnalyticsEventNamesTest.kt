@@ -22,6 +22,11 @@ class AnalyticsEventNamesTest {
         assertEquals("playcut_detail_view_presented", AnalyticsEvents.PLAYCUT_DETAIL_VIEW_PRESENTED)
         assertEquals("streaming_link_tapped", AnalyticsEvents.STREAMING_LINK_TAPPED)
         assertEquals("external_link_tapped", AnalyticsEvents.EXTERNAL_LINK_TAPPED)
+        assertEquals(
+            "request_line_request_completed_event",
+            AnalyticsEvents.REQUEST_LINE_REQUEST_COMPLETED
+        )
+        assertEquals("request_line_user_banned_event", AnalyticsEvents.REQUEST_LINE_USER_BANNED)
         assertEquals("error", AnalyticsEvents.ERROR)
     }
 
@@ -49,6 +54,8 @@ class AnalyticsEventNamesTest {
             "playcut_detail_view_presented",
             "streaming_link_tapped",
             "external_link_tapped",
+            "request_line_request_completed_event",
+            "request_line_user_banned_event",
             "error"
         )
 

@@ -13,6 +13,16 @@ if (secretsPropertiesFile.exists()) {
     secretsProperties.load(new FileInputStream(secretsPropertiesFile))
 }
 
+// request-o-matic base URL. Debug builds point at ROM staging so a QA tap does
+// not post a real request into the station's production Slack channel; release
+// builds point at production. Either can be overridden from secrets.properties
+// (REQUEST_O_MATIC_URL) so a moved Railway domain doesn't need a store release
+// to test against.
+def requestOMaticUrl = { String fallback ->
+    def override = secretsProperties.getProperty("REQUEST_O_MATIC_URL", "")?.trim()
+    return "\"${override ? override : fallback}\""
+}
+
 android {
     namespace 'org.wxyc.wxycapp'
     compileSdk 36
@@ -31,9 +41,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField "String", "REQUEST_O_MATIC_URL",
+                    requestOMaticUrl("https://request-o-matic-staging.up.railway.app/request")
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "REQUEST_O_MATIC_URL",
+                    requestOMaticUrl("https://request-o-matic-production.up.railway.app/request")
         }
     }
     buildFeatures {

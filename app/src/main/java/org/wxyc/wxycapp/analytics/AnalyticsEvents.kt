@@ -35,6 +35,13 @@ object AnalyticsEvents {
     const val STREAMING_LINK_TAPPED = "streaming_link_tapped"
     const val EXTERNAL_LINK_TAPPED = "external_link_tapped"
 
+    // Request line. Same spelling as iOS (`RequestLineRequestCompletedEvent.name`,
+    // `RequestLineUserBannedEvent.name`) so the two platforms share one series.
+    // The banned event is emitted on every 403: the listener sees "Request sent!"
+    // either way, so this is the only place a swallowed request is visible.
+    const val REQUEST_LINE_REQUEST_COMPLETED = "request_line_request_completed_event"
+    const val REQUEST_LINE_USER_BANNED = "request_line_user_banned_event"
+
     // Error
     const val ERROR = "error"
 }
