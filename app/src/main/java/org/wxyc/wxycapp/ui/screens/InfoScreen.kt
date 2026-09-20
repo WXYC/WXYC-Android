@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,7 +38,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.flow.collectLatest
 import org.wxyc.wxycapp.R
 import org.wxyc.wxycapp.ui.InfoViewModel
 import org.wxyc.wxycapp.ui.theme.BlueButton
@@ -55,9 +55,12 @@ fun InfoScreen(
     var requestText by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        viewModel.requestStatus.collectLatest { message ->
+    val requestStatus by viewModel.requestStatus.collectAsState()
+
+    LaunchedEffect(requestStatus) {
+        requestStatus?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.onRequestStatusShown()
         }
     }
 

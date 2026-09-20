@@ -27,12 +27,17 @@ class RequestLineClientTest {
         server.shutdown()
     }
 
+    private val captured = mutableListOf<Pair<String, Map<String, Any>>>()
+
     private fun client(fingerprint: String? = FINGERPRINT) = RequestLineClient(
         httpClient = OkHttpClient(),
         endpoint = server.url("/request").toString(),
         userAgent = "WXYC-Android/1.4",
         fingerprint = { fingerprint },
+        capture = { event, properties -> captured += event to properties },
     )
+
+    private fun capturedNames() = captured.map { it.first }
 
     @Test
     fun `posts the message with user agent and fingerprint headers`() {
@@ -81,6 +86,59 @@ class RequestLineClientTest {
         server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
 
         assertTrue(client().send("Aluminum Tunes") is RequestLineClient.Result.NetworkError)
+    }
+
+    @Test
+    fun `records the status code of every response`() {
+        server.enqueue(MockResponse().setResponseCode(502))
+
+        client().send("Aluminum Tunes")
+
+        assertEquals(listOf("request_line_request_completed_event"), capturedNames())
+        assertEquals(502, captured.single().second["status_code"])
+        assertEquals(false, captured.single().second["authenticated"])
+        assertTrue(captured.single().second["duration_ms"] is Double)
+    }
+
+    @Test
+    fun `records a ban even though the listener is told it was sent`() {
+        server.enqueue(MockResponse().setResponseCode(403).setBody("banned"))
+
+        assertEquals(RequestLineClient.Result.Sent, client().send("Aluminum Tunes"))
+        assertEquals(
+            listOf("request_line_request_completed_event", "request_line_user_banned_event"),
+            capturedNames(),
+        )
+    }
+
+    @Test
+    fun `keeps the status code when the error body cannot be read`() {
+        // Headers arrive, then the connection drops mid-body: the status is
+        // known, so this must not degrade into a network error.
+        server.enqueue(
+            MockResponse().setResponseCode(502)
+                .setBody("truncated")
+                .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+        )
+
+        assertEquals(RequestLineClient.Result.Failed(502), client().send("Aluminum Tunes"))
+    }
+
+    @Test
+    fun `reports a non-IO failure without throwing`() {
+        val exploding = RequestLineClient(
+            httpClient = OkHttpClient(),
+            endpoint = server.url("/request").toString(),
+            userAgent = "WXYC-Android/1.4",
+            fingerprint = { throw IllegalStateException("keystore unavailable") },
+            capture = { event, properties -> captured += event to properties },
+        )
+
+        val result = exploding.send("Aluminum Tunes")
+
+        assertTrue(result is RequestLineClient.Result.NetworkError)
+        assertEquals(listOf("error"), capturedNames())
+        assertEquals("request_line", captured.single().second["context"])
     }
 
     private companion object {
