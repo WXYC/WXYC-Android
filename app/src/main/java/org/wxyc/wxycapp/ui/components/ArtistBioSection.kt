@@ -12,7 +12,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +48,7 @@ fun ArtistBioSection(bio: String, modifier: Modifier = Modifier) {
     val rendered = remember(bio) { DiscogsMarkupParser.parse(bio).toBioAnnotatedString(linkColor) }
     // A bio made only of dropped id references renders as nothing; skip the header too.
     if (rendered.isBlank()) return
-    var expanded by rememberSaveable(bio) { mutableStateOf(false) }
+    var expanded by remember(bio) { mutableStateOf(false) }
     var overflows by remember(bio) { mutableStateOf(false) }
     // Bio links open through launchIntentSafely so a device with no browser gets a toast,
     // not the ActivityNotFoundException the default UriHandler would throw.
