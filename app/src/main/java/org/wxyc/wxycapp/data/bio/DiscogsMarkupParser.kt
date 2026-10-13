@@ -2,6 +2,7 @@ package org.wxyc.wxycapp.data.bio
 
 import java.net.URI
 import java.net.URLEncoder
+import java.util.Locale
 
 /**
  * Parses the Discogs markup in an artist bio (a Discogs artist profile, passed through
@@ -104,9 +105,18 @@ object DiscogsMarkupParser {
         url = "https://www.discogs.com/search/?q=${URLEncoder.encode(name, "UTF-8")}&type=artist",
     )
 
-    private fun validHref(href: String): String? = runCatching { URI(href) }.getOrNull()
-        ?.takeIf { it.scheme.equals("http", true) || it.scheme.equals("https", true) }
-        ?.let { href }
+    /**
+     * Returns [href] when it is an http(s) URL, else null. Spaces and pipes are
+     * percent-encoded first, because `java.net.URI` rejects them where iOS `URL` accepts
+     * them, and the scheme is lowercased, because Android matches intent schemes
+     * case-sensitively and `HTTPS://` would otherwise find no browser.
+     */
+    private fun validHref(href: String): String? {
+        val encoded = href.replace(" ", "%20").replace("|", "%7C")
+        val scheme = runCatching { URI(encoded) }.getOrNull()?.scheme ?: return null
+        val lowered = scheme.lowercase(Locale.ROOT).takeIf { it == "http" || it == "https" } ?: return null
+        return lowered + encoded.substring(scheme.length)
+    }
 
     // Phase 2: drop id references, tidying the text that sandwiched each one.
 

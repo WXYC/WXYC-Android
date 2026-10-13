@@ -175,6 +175,40 @@ class DiscogsMarkupParserTokenTest {
     }
 }
 
+/**
+ * The href a `[url=…]` tag keeps. Android matches intent schemes case-sensitively, so the
+ * scheme is lowercased; spaces and pipes are percent-encoded so `java.net.URI` accepts
+ * hrefs that iOS links; anything that is not http(s) keeps its text but loses the link.
+ */
+@RunWith(Parameterized::class)
+class DiscogsMarkupParserHrefTest(
+    private val href: String,
+    private val expected: String?,
+) {
+    @Test
+    fun `keeps a usable href`() {
+        assertEquals(
+            listOf(BioToken.UrlLink(expected, "Juana Molina")),
+            DiscogsMarkupParser.parse("[url=$href]Juana Molina[/url]"),
+        )
+    }
+
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun cases(): List<Array<String?>> = listOf(
+            arrayOf("https://example.com/a", "https://example.com/a"),
+            arrayOf("HTTPS://EXAMPLE.COM", "https://EXAMPLE.COM"),
+            arrayOf("Http://example.com/Path", "http://example.com/Path"),
+            arrayOf("https://example.com/juana molina", "https://example.com/juana%20molina"),
+            arrayOf("https://example.com/?q=doga|sonamos", "https://example.com/?q=doga%7Csonamos"),
+            arrayOf("ftp://example.com", null),
+            arrayOf("javascript:alert(1)", null),
+            arrayOf("not a valid url", null),
+        )
+    }
+}
+
 class StripDisambiguationSuffixTest {
 
     @Test
