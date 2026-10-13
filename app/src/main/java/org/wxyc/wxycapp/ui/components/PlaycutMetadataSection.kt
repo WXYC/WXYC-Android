@@ -3,12 +3,11 @@ package org.wxyc.wxycapp.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.wxyc.wxycapp.data.PlaycutMetadata
 
@@ -20,8 +19,6 @@ fun PlaycutMetadataSection(
     metadata: PlaycutMetadata,
     modifier: Modifier = Modifier
 ) {
-    var expandedBio by remember { mutableStateOf(false) }
-    
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -79,41 +76,7 @@ fun PlaycutMetadataSection(
             }
             
             // Artist Bio
-            metadata.artistBio?.let { bio ->
-                if (bio.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "About the Artist",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        
-                        Text(
-                            text = bio,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            maxLines = if (expandedBio) Int.MAX_VALUE else 4,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        
-                        // Show "Read More" only if bio is long enough
-                        if (bio.length > 200) {
-                            TextButton(
-                                onClick = { expandedBio = !expandedBio },
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text(
-                                    text = if (expandedBio) "Show Less" else "Read More",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            metadata.artistBio?.let { bio -> ArtistBioSection(bio = bio) }
         }
     }
 }
