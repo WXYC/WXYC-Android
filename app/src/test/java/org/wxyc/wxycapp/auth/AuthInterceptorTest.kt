@@ -44,8 +44,8 @@ class AuthInterceptorTest {
         server.shutdown()
     }
 
-    private fun get(): Int {
-        val client = OkHttpClient.Builder().addInterceptor(AuthInterceptor(tokens)).build()
+    private fun get(apiHost: String = server.hostName): Int {
+        val client = OkHttpClient.Builder().addInterceptor(AuthInterceptor(tokens, apiHost)).build()
         return client.newCall(Request.Builder().url(server.url("/proxy/metadata/artist")).build())
             .execute().use { it.code }
     }
@@ -95,5 +95,24 @@ class AuthInterceptorTest {
 
         assertThrows(IOException::class.java) { get() }
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `sends no token to a host other than the API's`() {
+        server.enqueue(MockResponse().setResponseCode(401))
+        tokens.failToken = true
+
+        assertEquals(401, get(apiHost = "api.wxyc.org"))
+        assertEquals(listOf(null), authorizationHeaders())
+        assertEquals(emptyList<String>(), tokens.rejected)
+    }
+
+    @Test
+    fun `matches the API host without regard to case`() {
+        server.enqueue(MockResponse())
+
+        get(apiHost = server.hostName.uppercase())
+
+        assertEquals(listOf("Bearer jwt-1"), authorizationHeaders())
     }
 }

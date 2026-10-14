@@ -95,10 +95,20 @@ class KeystoreSessionCipher(private val alias: String = "wxyc_auth_session") : S
         return cipher.doFinal(ciphertext, IV_BYTES, ciphertext.size - IV_BYTES)
     }
 
+    /**
+     * The alias's key, generating it if absent. An alias whose key will not load (a
+     * corrupted entry, or a non-AES key under the same name) is deleted and regenerated;
+     * any session encrypted under it is unreadable anyway and is cleared on load.
+     */
     @Synchronized
     private fun key(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-        (keyStore.getKey(alias, null) as? SecretKey)?.let { return it }
+        val existing = runCatching { keyStore.getKey(alias, null) }.getOrNull()
+        if (existing is SecretKey) return existing
+        if (keyStore.containsAlias(alias)) {
+            Log.w(TAG, "Regenerating an auth session key that would not load")
+            keyStore.deleteEntry(alias)
+        }
         val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
@@ -107,6 +117,7 @@ class KeystoreSessionCipher(private val alias: String = "wxyc_auth_session") : S
     }
 
     private companion object {
+        const val TAG = "KeystoreSessionCipher"
         const val KEYSTORE = "AndroidKeyStore"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12

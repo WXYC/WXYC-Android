@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import data.WxycApi
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.wxyc.wxycapp.analytics.PostHogManager
 import org.wxyc.wxycapp.BuildConfig
@@ -77,7 +78,7 @@ object AppModule {
     @Authenticated
     fun provideAuthenticatedHttpClient(authenticator: AnonymousAuthenticator): OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(authenticator))
+            .addInterceptor(AuthInterceptor(authenticator, API_ORIGIN.toHttpUrl().host))
             .build()
 
     @Provides

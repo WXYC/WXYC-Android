@@ -21,10 +21,14 @@ interface BearerTokenProvider {
  * a second 401 is returned as is so a broken session cannot loop. Install it with
  * [okhttp3.OkHttpClient.Builder.addInterceptor] (an application interceptor), which may
  * call [Interceptor.Chain.proceed] twice.
+ *
+ * Requests to any host other than [apiHost] (a redirect, or a client reused for another
+ * service) pass through untouched, so the JWT never leaves the API.
  */
-class AuthInterceptor(private val tokens: BearerTokenProvider) : Interceptor {
+class AuthInterceptor(private val tokens: BearerTokenProvider, private val apiHost: String) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
+        if (!chain.request().url.host.equals(apiHost, ignoreCase = true)) return chain.proceed(chain.request())
         val jwt = tokens.token()
         val response = chain.proceed(chain.request().withBearer(jwt))
         if (response.code != 401) return response
