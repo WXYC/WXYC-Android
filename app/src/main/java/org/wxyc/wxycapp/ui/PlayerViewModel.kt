@@ -154,24 +154,27 @@ class PlayerViewModel @Inject constructor(
     /** Playcuts whose bio lookup just missed; not retried for a few minutes. */
     private val bioMisses = RecentMisses(ttlSeconds = BIO_MISS_TTL_SECONDS)
 
+    /** Playcuts whose bio is final for this session; never looked up again. */
+    private val completeBios = java.util.Collections.synchronizedSet(mutableSetOf<Int>())
+
     /**
      * Loads a server-assisted rendering of [playcut]'s bio into [PlayerUiState.bioTokens]
-     * (see [ArtistBioClient.renderedBio]), once per playcut, when [BioFetchPolicy.shouldFetch]
-     * allows it. A lookup that finds nothing or
-     * fails is not repeated for [BIO_MISS_TTL_SECONDS]; meanwhile the sheet keeps the
-     * locally parsed bio.
+     * (see [ArtistBioClient.renderedBio]) when [BioFetchPolicy.shouldFetch] allows it. A
+     * complete result is kept for good. A lookup that finds nothing, fails, or resolves only
+     * part of the bio's ids is tried again after [BIO_MISS_TTL_SECONDS]; a partial result is
+     * shown meanwhile, and otherwise the sheet keeps the locally parsed bio.
      */
     fun loadBioTokens(playcut: Playcut) {
         val artist = playcut.artistName ?: return
         val bio = playcut.metadata?.artistBio ?: return
-        if (!BioFetchPolicy.shouldFetch(playcut) || playcut.id in _uiState.value.bioTokens || bioMisses.isRecent(playcut.id)) return
+        if (!BioFetchPolicy.shouldFetch(playcut) || playcut.id in completeBios || bioMisses.isRecent(playcut.id)) return
         viewModelScope.launch {
             val result = artistBioClient.renderedBio(artist, playcut.releaseTitle, bio)
-            if (result !is BioTokensResult.Found) {
-                bioMisses.record(playcut.id)
-                return@launch
+            if (result is BioTokensResult.Found) {
+                _uiState.update { it.copy(bioTokens = it.bioTokens + (playcut.id to result.tokens)) }
             }
-            _uiState.update { it.copy(bioTokens = it.bioTokens + (playcut.id to result.tokens)) }
+            if (result is BioTokensResult.Found && result.complete) completeBios += playcut.id
+            else bioMisses.record(playcut.id)
         }
     }
 

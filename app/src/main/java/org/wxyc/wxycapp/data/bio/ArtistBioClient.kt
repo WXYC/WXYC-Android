@@ -63,7 +63,7 @@ class ArtistBioClient(
             if (failed) break
         }
         return when {
-            resolved.isNotEmpty() -> BioTokensResult.Found(DiscogsMarkupParser.parse(bio, resolved))
+            resolved.isNotEmpty() -> BioTokensResult.Found(DiscogsMarkupParser.parse(bio, resolved), complete = !failed)
             failed -> BioTokensResult.Failed
             else -> BioTokensResult.NoTokens
         }
@@ -174,8 +174,11 @@ class ArtistBioClient(
 
 /** What [ArtistBioClient.bioTokens] learned. */
 sealed interface BioTokensResult {
-    /** The server's parsed bio. */
-    data class Found(val tokens: List<BioToken>) : BioTokensResult
+    /**
+     * The server's parsed bio. [complete] is false when id resolution stopped partway at a
+     * failure, so the caller should show it but try again later.
+     */
+    data class Found(val tokens: List<BioToken>, val complete: Boolean = true) : BioTokensResult
 
     /** The server answered and has no tokens for this artist. */
     object NoTokens : BioTokensResult

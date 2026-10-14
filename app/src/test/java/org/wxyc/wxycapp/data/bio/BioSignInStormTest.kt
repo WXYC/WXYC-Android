@@ -69,6 +69,7 @@ class BioSignInStormTest {
             wire = AuthWireClient(OkHttpClient(), base, "WXYC-Android/1.4", fingerprint = { null }),
             store = FakeSessionStore(),
             clock = { 1_000_000L },
+            monotonicClock = { 0L },
         )
         val authed = OkHttpClient.Builder().addInterceptor(AuthInterceptor(authenticator, server.hostName)).build()
         return ArtistBioClient(authed, base)
@@ -77,31 +78,52 @@ class BioSignInStormTest {
     /** A bio with 25 id references: the worst case for the resolve pass. */
     private val bio = (1..25).joinToString(", ") { "[a$it]" }
 
+    /** Opens [sheets] detail sheets in a row, each for a different playcut, on one app session. */
+    private fun openSheets(sheets: Int): List<BioTokensResult> {
+        val client = bioClient()
+        return (1..sheets).map { n -> runBlocking { client.renderedBio("Artist $n", "Release $n", bio) } }
+    }
+
     @Test
-    fun `a rate-limited sign-in is attempted once per sheet open`() {
+    fun `a rate-limited sign-in is attempted once across many sheet opens`() {
         signInStatus = 429
 
-        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+        val results = openSheets(10)
 
+        assertEquals(List(10) { BioTokensResult.Failed }, results)
         assertEquals(1, signIns.get())
         assertEquals(0, proxyCalls.get())
     }
 
     @Test
-    fun `a failing mint costs one sign-in and creates one anonymous user`() {
+    fun `a server that rejects every new session's first mint costs one sign-in across many sheet opens`() {
+        for (status in listOf(401, 404)) {
+            signIns.set(0)
+            mints.set(0)
+            mintStatus = status
+
+            assertEquals(List(10) { BioTokensResult.Failed }, openSheets(10))
+
+            assertEquals("mint $status", 1, signIns.get())
+            assertEquals("mint $status", 1, mints.get())
+        }
+        assertEquals(0, proxyCalls.get())
+    }
+
+    @Test
+    fun `a failing mint keeps its session, so many sheet opens create one anonymous user`() {
         mintStatus = 500
 
-        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+        assertEquals(List(10) { BioTokensResult.Failed }, openSheets(10))
 
         assertEquals(1, signIns.get())
-        assertEquals(1, mints.get())
         assertEquals(0, proxyCalls.get())
     }
 
     @Test
     fun `a resolve pass whose calls are rejected costs at most one sign-in`() {
         // Auth works until the proxy starts rejecting every JWT mid-pass.
-        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+        assertEquals(BioTokensResult.Failed, openSheets(1).single())
 
         assertEquals(1, signIns.get())
     }
