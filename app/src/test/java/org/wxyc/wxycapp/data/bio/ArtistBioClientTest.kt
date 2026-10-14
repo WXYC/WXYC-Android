@@ -1,6 +1,7 @@
 package org.wxyc.wxycapp.data.bio
 
 import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -10,8 +11,11 @@ import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 class ArtistBioClientTest {
 
@@ -28,7 +32,9 @@ class ArtistBioClientTest {
         server.shutdown()
     }
 
-    private fun client() = ArtistBioClient(OkHttpClient(), server.url("/").toString().trimEnd('/'))
+    private var now = 1_000_000L
+
+    private fun client() = ArtistBioClient(OkHttpClient(), server.url("/").toString().trimEnd('/'), clock = { now })
 
     private fun enqueueAlbum(discogsArtistId: Int?) {
         val id = discogsArtistId?.let { ""","discogsArtistId":$it""" } ?: ""
@@ -80,14 +86,21 @@ class ArtistBioClientTest {
         val responses = listOf(
             MockResponse().setBody("""{"bio":"raw"}"""),
             MockResponse().setBody("""{"bioTokens":null}"""),
-            MockResponse().setBody("""{"bioTokens":[]}"""),
-            MockResponse().setBody("""{"bioTokens":[{"type":"poem"}]}"""),
             MockResponse().setResponseCode(404),
         )
         for (response in responses) {
             enqueueAlbum(discogsArtistId = 1)
             server.enqueue(response)
             assertEquals(response.toString(), BioTokensResult.NoTokens, client().bioTokens("Stereolab", null))
+        }
+    }
+
+    @Test
+    fun `treats any token array as final, even one with no text, as iOS does`() {
+        for (body in listOf("""{"bioTokens":[]}""", """{"bioTokens":[{"type":"poem"}]}""", """{"bioTokens":[{"type":"plainText","text":""}]}""")) {
+            enqueueAlbum(discogsArtistId = 1)
+            server.enqueue(MockResponse().setBody(body))
+            assertTrue(body, client().bioTokens("Stereolab", null) is BioTokensResult.Found)
         }
     }
 
@@ -147,7 +160,7 @@ class ArtistBioClientTest {
     }
 
     /** Serves an album with [discogsArtistId], an artist with [bioTokens], and [names] by "type-id". */
-    private fun route(discogsArtistId: Int?, bioTokens: String?, names: Map<String, String>) {
+    private fun route(discogsArtistId: Int?, bioTokens: String?, names: Map<String, String>, resolveStatus: Int = 404) {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val url = request.requestUrl!!
@@ -157,7 +170,7 @@ class ArtistBioClientTest {
                     "/proxy/metadata/artist" -> MockResponse().setBody("""{"bioTokens":${bioTokens ?: "null"}}""")
                     "/proxy/entity/resolve" -> names["${url.queryParameter("type")}-${url.queryParameter("id")}"]
                         ?.let { MockResponse().setBody("""{"name":"$it","type":"artist","id":1}""") }
-                        ?: MockResponse().setResponseCode(404)
+                        ?: MockResponse().setResponseCode(resolveStatus)
                     else -> MockResponse().setResponseCode(500)
                 }
             }
@@ -170,9 +183,9 @@ class ArtistBioClientTest {
     fun `renders the server tokens when there are any, without resolving ids`() {
         route(discogsArtistId = 7, bioTokens = """[{"type":"plainText","text":"From London."}]""", names = mapOf("artist-1001" to "x"))
 
-        val rendered = client().renderedBio("Stereolab", null, "Founded by [a1001].")
+        val rendered = runBlocking { client().renderedBio("Stereolab", null, "Founded by [a1001].") }
 
-        assertEquals(listOf(BioToken.PlainText("From London.")), rendered)
+        assertEquals(BioTokensResult.Found(listOf(BioToken.PlainText("From London."))), rendered)
         assertEquals(listOf("/proxy/metadata/album", "/proxy/metadata/artist"), paths())
     }
 
@@ -180,26 +193,67 @@ class ArtistBioClientTest {
     fun `otherwise resolves the raw bio's ids and renders them as links`() {
         route(discogsArtistId = null, bioTokens = null, names = mapOf("artist-1001" to "Lætitia Sadier"))
 
-        val rendered = client().renderedBio("Stereolab", null, "Founded by [a1001].")
+        val rendered = runBlocking { client().renderedBio("Stereolab", null, "Founded by [a1001].") }
 
         assertEquals(
-            listOf(
-                BioToken.PlainText("Founded by "),
-                BioToken.ArtistLink("Lætitia Sadier", "Lætitia Sadier", "https://www.discogs.com/artist/1001"),
-                BioToken.PlainText("."),
+            BioTokensResult.Found(
+                listOf(
+                    BioToken.PlainText("Founded by "),
+                    BioToken.ArtistLink("Lætitia Sadier", "Lætitia Sadier", "https://www.discogs.com/artist/1001"),
+                    BioToken.PlainText("."),
+                )
             ),
             rendered,
         )
-        val resolve = paths().last()
-        assertEquals("/proxy/entity/resolve", resolve)
     }
 
     @Test
-    fun `returns null when the bio has no ids or none resolve`() {
+    fun `reports no tokens when the bio has no ids or none resolve`() {
         for (bio in listOf("Formed in London.", "Founded by [a1001].")) {
             route(discogsArtistId = null, bioTokens = null, names = emptyMap())
-            assertNull(bio, client().renderedBio("Stereolab", null, bio))
+            assertEquals(bio, BioTokensResult.NoTokens, runBlocking { client().renderedBio("Stereolab", null, bio) })
         }
+    }
+
+    @Test
+    fun `does not resolve ids when the token lookup failed`() {
+        server.enqueue(MockResponse().setResponseCode(500))
+
+        val rendered = runBlocking { client().renderedBio("Stereolab", null, "Founded by [a1001].") }
+
+        assertEquals(BioTokensResult.Failed, rendered)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `stops resolving at the first failure, at most four at a time`() {
+        route(discogsArtistId = null, bioTokens = null, names = emptyMap(), resolveStatus = 500)
+        val bio = (1..12).joinToString(" ") { "[a$it]" }
+
+        val rendered = runBlocking { client().renderedBio("Stereolab", null, bio) }
+
+        assertEquals(BioTokensResult.Failed, rendered)
+        assertEquals(4, paths().count { it == "/proxy/entity/resolve" })
+    }
+
+    @Test
+    fun `keeps what resolved before a failure`() {
+        route(discogsArtistId = null, bioTokens = null, names = (1..4).associate { "artist-$it" to "Name $it" }, resolveStatus = 500)
+        val bio = (1..8).joinToString(" ") { "[a$it]" }
+
+        val rendered = runBlocking { client().renderedBio("Stereolab", null, bio) } as BioTokensResult.Found
+
+        assertEquals(listOf("Name 1", "Name 2", "Name 3", "Name 4"), rendered.tokens.filterIsInstance<BioToken.ArtistLink>().map { it.name })
+    }
+
+    @Test
+    fun `resolves at most twenty ids per bio`() {
+        route(discogsArtistId = null, bioTokens = null, names = (1..30).associate { "artist-$it" to "Name $it" })
+        val bio = (1..30).joinToString(" ") { "[a$it]" }
+
+        runBlocking { client().renderedBio("Stereolab", null, bio) }
+
+        assertEquals(20, paths().count { it == "/proxy/entity/resolve" })
     }
 
     @Test
@@ -218,9 +272,37 @@ class ArtistBioClientTest {
     }
 
     @Test
-    fun `an unresolvable entity is null`() {
+    fun `remembers an unknown entity for ten minutes`() {
         route(discogsArtistId = null, bioTokens = null, names = emptyMap())
+        val client = client()
+        val ref = EntityRef(EntityRef.Type.ARTIST, 1)
 
-        assertNull(client().resolveEntity(EntityRef(EntityRef.Type.ARTIST, 1)))
+        assertNull(client.resolveEntity(ref))
+        now += 599
+        assertNull(client.resolveEntity(ref))
+        assertEquals(1, server.requestCount)
+        now += 1
+        assertNull(client.resolveEntity(ref))
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `a failed resolution throws and is not remembered`() {
+        route(discogsArtistId = null, bioTokens = null, names = emptyMap(), resolveStatus = 503)
+        val client = client()
+        val ref = EntityRef(EntityRef.Type.ARTIST, 1)
+
+        repeat(2) { assertThrows(IOException::class.java) { client.resolveEntity(ref) } }
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `the name cache is bounded`() {
+        val cache = EntityNameCache(maxEntries = 2, negativeTtlSeconds = 600, clock = { now })
+        val refs = (1L..3L).map { EntityRef(EntityRef.Type.ARTIST, it) }
+        refs.forEach { cache.put(it, "Name ${it.id}") }
+
+        assertNull(cache.get(refs[0]))
+        assertEquals(EntityNameCache.Hit("Name 3"), cache.get(refs[2]))
     }
 }
