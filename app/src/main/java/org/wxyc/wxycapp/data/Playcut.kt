@@ -13,5 +13,7 @@ data class Playcut(
     val releaseTitle: String? = null,
     val imageURL: String? = null,
     val metadata: PlaycutMetadata? = null,
-    val displayMessage: String? = null
+    val displayMessage: String? = null,
+    /** The server's enrichment status (`pending`, `enriched_match`, ...); null when not sent. */
+    val metadataStatus: String? = null
 )

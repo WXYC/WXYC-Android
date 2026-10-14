@@ -60,6 +60,19 @@ class FlowsheetDtoTest {
     }
 
     @Test
+    fun `track entry carries the server's metadata status`() {
+        val cases = mapOf(
+            ""","metadata_status":"enriched_match"""" to "enriched_match",
+            ""","metadata_status":"pending"""" to "pending",
+            "" to null,
+        )
+        for ((field, expected) in cases) {
+            val json = """{"id":1,"show_id":2,"play_order":3,"add_time":"2026-09-12T20:45:25.524Z","entry_type":"track"$field}"""
+            assertEquals(field, expected, parse(json).toDomain().metadataStatus)
+        }
+    }
+
+    @Test
     fun `breakpoint prefers the server's own message over a derived hour label`() {
         val json = """
             {"id":5318240,"show_id":1951362,"play_order":8,
