@@ -103,6 +103,16 @@ class AuthWireClientTest {
         assertEquals(false, error.message.orEmpty().contains("session-1"))
     }
 
+    @Test
+    fun `carries Retry-After seconds on a failure`() {
+        val cases = listOf("120" to 120L, " 7 " to 7L, "Wed, 21 Oct 2026 07:28:00 GMT" to null, null to null, "-5" to null)
+        for ((header, expected) in cases) {
+            server.enqueue(MockResponse().setResponseCode(429).apply { header?.let { setHeader("Retry-After", it) } })
+            val error = assertThrows(AuthHttpException::class.java) { client().signInAnonymously() }
+            assertEquals("for '$header'", expected, error.retryAfterSeconds)
+        }
+    }
+
     private companion object {
         const val FINGERPRINT = "1b4e28ba-2fa1-11d2-883f-0016d3cca427"
     }

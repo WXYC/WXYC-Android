@@ -25,8 +25,15 @@ data class AuthSession(
         "AuthSession(userId=$userId, jwtExpiresAtEpochSeconds=$jwtExpiresAtEpochSeconds)"
 }
 
-/** An auth endpoint answered with a status other than success. */
-class AuthHttpException(val statusCode: Int) : IOException("Auth request failed with HTTP $statusCode")
+/**
+ * An auth endpoint answered with a status other than success. [retryAfterSeconds] is the
+ * response's `Retry-After` when it gave one in seconds.
+ */
+class AuthHttpException(val statusCode: Int, val retryAfterSeconds: Long? = null) :
+    IOException("Auth request failed with HTTP $statusCode")
+
+/** A sign-in was skipped because an earlier one failed less than a cooldown ago. */
+class AuthCooldownException : IOException("Anonymous sign-in is cooling down after a failure")
 
 /** An auth endpoint answered with a body the client could not use. */
 class AuthResponseException(message: String) : IOException(message)

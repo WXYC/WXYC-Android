@@ -62,7 +62,10 @@ class AuthWireClient(
 
     private fun call(request: Request): JsonObject =
         httpClient.newCall(request).execute().use { response ->
-            if (response.code != 200 && response.code != 201) throw AuthHttpException(response.code)
+            if (response.code != 200 && response.code != 201) {
+                val retryAfter = response.header("Retry-After")?.trim()?.toLongOrNull()?.takeIf { it >= 0 }
+                throw AuthHttpException(response.code, retryAfter)
+            }
             runCatching { JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject }
                 .getOrElse { throw AuthResponseException("Auth response is not a JSON object") }
         }
