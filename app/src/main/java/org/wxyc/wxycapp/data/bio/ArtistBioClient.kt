@@ -7,7 +7,12 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Fetches the server's pre-parsed artist bio (`bioTokens`, LML's `profile_tokens`), which
@@ -20,35 +25,65 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * @param baseUrl the API origin with no trailing slash, e.g. `https://api.wxyc.org`.
  */
-class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl: String) {
+class ArtistBioClient(
+    private val httpClient: OkHttpClient,
+    private val baseUrl: String,
+    clock: () -> Long = { System.currentTimeMillis() / 1000 },
+) {
 
-    /** Entity names already resolved this process; Discogs names rarely change. */
-    private val names = ConcurrentHashMap<EntityRef, String>()
+    /** Entity answers already fetched this process; Discogs names rarely change. */
+    private val names = EntityNameCache(MAX_CACHED_NAMES, NEGATIVE_TTL_SECONDS, clock)
 
     /**
-     * The best rendering the server can help with for [bio], or null to keep the local
-     * parse: the server's [bioTokens] when there are any, otherwise [bio] parsed with its
-     * id references resolved through [resolveEntity]. Blocking.
+     * The best rendering the server can help with for [bio]. Server tokens win whenever
+     * the server sent any. Only when it answered with none is [bio] parsed with its id
+     * references resolved: up to [MAX_RESOLVED_PER_BIO] of them, [RESOLVE_CONCURRENCY] at a
+     * time, stopping at the first failed call. A failed token lookup resolves nothing, so a
+     * failing session costs one attempt per call, not one per id.
      */
-    fun renderedBio(artistName: String, releaseTitle: String?, bio: String): List<BioToken>? {
-        bioTokens(artistName, releaseTitle)?.let { return it }
-        val resolved = DiscogsMarkupParser.entityReferences(bio).take(MAX_RESOLVED_PER_BIO)
-            .mapNotNull { ref -> resolveEntity(ref)?.let { ref to it } }
-            .toMap()
-        return resolved.takeIf { it.isNotEmpty() }?.let { DiscogsMarkupParser.parse(bio, it) }
+    suspend fun renderedBio(artistName: String, releaseTitle: String?, bio: String): BioTokensResult =
+        withContext(Dispatchers.IO) {
+            when (val served = bioTokens(artistName, releaseTitle)) {
+                BioTokensResult.NoTokens -> resolveReferences(bio)
+                else -> served
+            }
+        }
+
+    private suspend fun resolveReferences(bio: String): BioTokensResult {
+        val resolved = mutableMapOf<EntityRef, String>()
+        var failed = false
+        val batches = DiscogsMarkupParser.entityReferences(bio).take(MAX_RESOLVED_PER_BIO).chunked(RESOLVE_CONCURRENCY)
+        for (batch in batches) {
+            val results = coroutineScope { batch.map { ref -> async { ref to runCatching { resolveEntity(ref) } } }.awaitAll() }
+            results.forEach { (ref, result) -> result.getOrNull()?.let { resolved[ref] = it } }
+            results.firstNotNullOfOrNull { it.second.exceptionOrNull() }?.let { e ->
+                Log.w(TAG, "Stopped resolving bio ids: ${e.javaClass.simpleName} ${e.message.orEmpty()}")
+                failed = true
+            }
+            if (failed) break
+        }
+        return when {
+            resolved.isNotEmpty() -> BioTokensResult.Found(DiscogsMarkupParser.parse(bio, resolved))
+            failed -> BioTokensResult.Failed
+            else -> BioTokensResult.NoTokens
+        }
     }
 
-    /** The Discogs name for [ref] from `proxy/entity/resolve`, or null when it cannot be had. Blocking. */
-    fun resolveEntity(ref: EntityRef): String? = names[ref] ?: try {
+    /**
+     * The Discogs name for [ref] from `proxy/entity/resolve`, or null when the server says
+     * there is none. Answers are cached. Blocking.
+     *
+     * @throws java.io.IOException when the call fails (auth, transport or a server error).
+     */
+    fun resolveEntity(ref: EntityRef): String? {
+        names.get(ref)?.let { return it.name }
         val url = url("/proxy/entity/resolve")
             .addQueryParameter("type", ref.type.wireName)
             .addQueryParameter("id", ref.id.toString())
             .build()
-        get(url)["name"]?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
-            ?.also { names[ref] = it }
-    } catch (e: Exception) {
-        Log.w(TAG, "Entity ${ref.type.wireName} unresolved: ${e.javaClass.simpleName} ${e.message.orEmpty()}")
-        null
+        val name = get(url)?.get("name")?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
+        names.put(ref, name)
+        return name
     }
 
     /**
@@ -61,9 +96,9 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
             .apply { releaseTitle?.let { addQueryParameter("releaseTitle", it) } }.build()
         val artistId = get(albumUrl)?.number("discogsArtistId")
         val artist = artistId?.let { get(url("/proxy/metadata/artist").addQueryParameter("artistId", it.toString()).build()) }
+        // Any token array is final, even one with no text: iOS DiscogsFormatter.resolvedBio.
         artist?.get("bioTokens")?.takeIf { it.isJsonArray }?.asJsonArray
             ?.mapNotNull { element -> element.takeIf { it.isJsonObject }?.let { decodeToken(it.asJsonObject) } }
-            ?.takeIf { tokens -> tokens.any { it.text.isNotEmpty() } }
             ?.let { BioTokensResult.Found(it) }
             ?: BioTokensResult.NoTokens
     } catch (e: Exception) {
@@ -78,8 +113,9 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
     private fun get(url: HttpUrl): JsonObject? =
         httpClient.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
             if (response.code == 404) return null
-            check(response.isSuccessful) { "HTTP ${response.code}" }
-            JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+            runCatching { JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject }
+                .getOrElse { throw IOException("Response is not a JSON object") }
         }
 
     companion object {
@@ -87,6 +123,14 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
 
         /** Bounds the calls one bio can cost against the proxy's 120 per minute per user. */
         private const val MAX_RESOLVED_PER_BIO = 20
+
+        /** Resolutions in flight at once. */
+        private const val RESOLVE_CONCURRENCY = 4
+
+        private const val MAX_CACHED_NAMES = 500
+
+        /** Matches Backend-Service's `ENTITY_RESOLVE_NEGATIVE_TTL_MS` (10 minutes). */
+        private const val NEGATIVE_TTL_SECONDS = 600L
 
         /**
          * Maps one `DiscogsResolvedToken` to a [BioToken] with iOS `ResolvedBioToken`'s rules:

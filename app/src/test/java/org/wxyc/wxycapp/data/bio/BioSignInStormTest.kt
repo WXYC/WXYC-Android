@@ -1,0 +1,108 @@
+package org.wxyc.wxycapp.data.bio
+
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+import org.wxyc.wxycapp.auth.AnonymousAuthenticator
+import org.wxyc.wxycapp.auth.AuthInterceptor
+import org.wxyc.wxycapp.auth.AuthWireClient
+import org.wxyc.wxycapp.auth.FakeSessionStore
+import org.wxyc.wxycapp.auth.fakeJwt
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * The whole stack a detail sheet uses, against a server whose auth is failing. Anonymous
+ * sign-in shares Backend-Service's per-IP bucket (10 per 15 minutes) with DJ password
+ * sign-in, so one sheet open must never cost more than one sign-in attempt.
+ */
+class BioSignInStormTest {
+
+    private lateinit var server: MockWebServer
+    private val signIns = AtomicInteger()
+    private val mints = AtomicInteger()
+    private val proxyCalls = AtomicInteger()
+
+    /** What sign-in and mint answer; 200 means success. */
+    @Volatile private var signInStatus = 200
+    @Volatile private var mintStatus = 200
+
+    @Before
+    fun setUp() {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.requestUrl!!.encodedPath) {
+                "/auth/sign-in/anonymous" -> {
+                    val n = signIns.incrementAndGet()
+                    if (signInStatus != 200) MockResponse().setResponseCode(signInStatus)
+                    else MockResponse().setBody("""{"token":"session-$n","user":{"id":"user-$n"}}""")
+                }
+                "/auth/token" -> {
+                    mints.incrementAndGet()
+                    if (mintStatus != 200) MockResponse().setResponseCode(mintStatus)
+                    else MockResponse().setBody("""{"token":"${fakeJwt(exp = 2_000_000_000L)}"}""")
+                }
+                else -> {
+                    proxyCalls.incrementAndGet()
+                    if (request.requestUrl!!.encodedPath == "/proxy/metadata/album") MockResponse().setBody("{}")
+                    else MockResponse().setResponseCode(401)
+                }
+            }
+        }
+        server.start()
+    }
+
+    @After
+    fun tearDown() {
+        server.shutdown()
+    }
+
+    private fun bioClient(): ArtistBioClient {
+        val base = server.url("/").toString().trimEnd('/')
+        val authenticator = AnonymousAuthenticator(
+            wire = AuthWireClient(OkHttpClient(), base, "WXYC-Android/1.4", fingerprint = { null }),
+            store = FakeSessionStore(),
+            clock = { 1_000_000L },
+        )
+        val authed = OkHttpClient.Builder().addInterceptor(AuthInterceptor(authenticator, server.hostName)).build()
+        return ArtistBioClient(authed, base)
+    }
+
+    /** A bio with 25 id references: the worst case for the resolve pass. */
+    private val bio = (1..25).joinToString(", ") { "[a$it]" }
+
+    @Test
+    fun `a rate-limited sign-in is attempted once per sheet open`() {
+        signInStatus = 429
+
+        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+
+        assertEquals(1, signIns.get())
+        assertEquals(0, proxyCalls.get())
+    }
+
+    @Test
+    fun `a failing mint costs one sign-in and creates one anonymous user`() {
+        mintStatus = 500
+
+        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+
+        assertEquals(1, signIns.get())
+        assertEquals(1, mints.get())
+        assertEquals(0, proxyCalls.get())
+    }
+
+    @Test
+    fun `a resolve pass whose calls are rejected costs at most one sign-in`() {
+        // Auth works until the proxy starts rejecting every JWT mid-pass.
+        assertEquals(BioTokensResult.Failed, runBlocking { bioClient().renderedBio("Stereolab", null, bio) })
+
+        assertEquals(1, signIns.get())
+    }
+}

@@ -19,13 +19,11 @@ import org.wxyc.wxycapp.data.bio.BioToken
 import org.wxyc.wxycapp.data.bio.BioTokensResult
 import org.wxyc.wxycapp.data.bio.RecentMisses
 import data.JsonImporter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.wxyc.wxycapp.analytics.PostHogManager
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
@@ -157,16 +155,18 @@ class PlayerViewModel @Inject constructor(
     private val bioMisses = RecentMisses(ttlSeconds = BIO_MISS_TTL_SECONDS)
 
     /**
-     * Loads the server-parsed bio for [playcut] into [PlayerUiState.bioTokens], once per
-     * playcut, when [BioFetchPolicy.shouldFetch] allows it. A lookup that finds nothing or
+     * Loads a server-assisted rendering of [playcut]'s bio into [PlayerUiState.bioTokens]
+     * (see [ArtistBioClient.renderedBio]), once per playcut, when [BioFetchPolicy.shouldFetch]
+     * allows it. A lookup that finds nothing or
      * fails is not repeated for [BIO_MISS_TTL_SECONDS]; meanwhile the sheet keeps the
      * locally parsed bio.
      */
     fun loadBioTokens(playcut: Playcut) {
         val artist = playcut.artistName ?: return
+        val bio = playcut.metadata?.artistBio ?: return
         if (!BioFetchPolicy.shouldFetch(playcut) || playcut.id in _uiState.value.bioTokens || bioMisses.isRecent(playcut.id)) return
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) { artistBioClient.bioTokens(artist, playcut.releaseTitle) }
+            val result = artistBioClient.renderedBio(artist, playcut.releaseTitle, bio)
             if (result !is BioTokensResult.Found) {
                 bioMisses.record(playcut.id)
                 return@launch
