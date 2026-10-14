@@ -14,25 +14,53 @@ import java.util.Locale
  * - `[b]`, `[i]`, `[u]` formatting and `[url=href]text[/url]`
  * - `[aNNNN]`, `[rNNNN]`/`[r=NNNN]`, `[mNNNN]`/`[m=NNNN]`, `[lNNNN]` id references
  *
- * Android has no entity resolver, so id references are dropped, and the whitespace and
- * punctuation around each drop is tidied so the sentence reads as though the reference had
- * never been there. Unknown and orphaned tags are skipped. In addition to iOS, HTML entities
- * are decoded and CRLF / CR line breaks become `\n`.
+ * Artist, release and master ids become links when the caller passes their names (looked up
+ * through `proxy/entity/resolve`, as iOS's async parser does). Every other id reference is
+ * dropped, and the whitespace and punctuation around each drop is tidied so the sentence
+ * reads as though the reference had never been there. Unknown and orphaned tags are skipped.
+ * In addition to iOS, HTML entities are decoded and CRLF / CR line breaks become `\n`.
  */
 object DiscogsMarkupParser {
 
-    /** Parses [text] into display tokens. Never throws; malformed markup degrades to text. */
-    fun parse(text: String): List<BioToken> {
+    /**
+     * Parses [text] into display tokens, rendering each id reference found in [names] as a
+     * Discogs link. Never throws; malformed markup degrades to text.
+     */
+    fun parse(text: String, names: Map<EntityRef, String> = emptyMap()): List<BioToken> {
         val normalized = text.replace("\r\n", "\n").replace('\r', '\n')
-        return normalizeAfterDrops(tokenize(normalized))
+        return normalizeAfterDrops(tokenize(normalized, names))
+    }
+
+    /** The artist, release and master ids [text] references, for the caller to resolve. */
+    fun entityReferences(text: String): Set<EntityRef> =
+        TAG.findAll(text).mapNotNull { entityRef(it.groupValues[1]) }.toSet()
+
+    private fun entityRef(tag: String): EntityRef? {
+        if (!ID_REFERENCE.matches(tag)) return null
+        val type = when (tag[0]) {
+            'a' -> EntityRef.Type.ARTIST
+            'r' -> EntityRef.Type.RELEASE
+            'm' -> EntityRef.Type.MASTER
+            else -> return null
+        }
+        return tag.trimStart('a', 'r', 'm', '=').toLongOrNull()?.let { EntityRef(type, it) }
+    }
+
+    private fun resolved(ref: EntityRef, name: String): BioToken {
+        val url = "https://www.discogs.com/${ref.type.wireName}/${ref.id}"
+        return if (ref.type == EntityRef.Type.ARTIST) {
+            BioToken.ArtistLink(name = name, displayName = stripDisambiguationSuffix(name), url = url)
+        } else {
+            BioToken.UrlLink(href = url, content = name)
+        }
     }
 
     /** Removes a Discogs disambiguation suffix: "Salamanda (8)" becomes "Salamanda". */
     fun stripDisambiguationSuffix(name: String): String = name.replace(DISAMBIGUATION_SUFFIX, "")
 
-    // Phase 1: tokenize. `null` marks an id reference that will be dropped.
+    // Phase 1: tokenize. `null` marks an unresolved id reference that will be dropped.
 
-    private fun tokenize(text: String): List<BioToken?> {
+    private fun tokenize(text: String, names: Map<EntityRef, String>): List<BioToken?> {
         val tokens = mutableListOf<BioToken?>()
         var pos = 0
         while (pos < text.length) {
@@ -50,7 +78,7 @@ object DiscogsMarkupParser {
             val tag = text.substring(open + 1, close)
             pos = close + 1
             when {
-                ID_REFERENCE.matches(tag) -> tokens += null
+                ID_REFERENCE.matches(tag) -> tokens += entityRef(tag)?.let { ref -> names[ref]?.let { resolved(ref, it) } }
                 tag.startsWith("a=") && tag.length > 2 -> tokens += artistLink(decode(tag.substring(2)))
                 tag.startsWith("l=") && tag.length > 2 -> tokens += BioToken.LabelName(decode(tag.substring(2)))
                 tag.startsWith("url=") && tag.length > 4 -> {
@@ -194,6 +222,7 @@ object DiscogsMarkupParser {
     }
 
     private val ID_REFERENCE = Regex("""a\d+|[rm]=?\d+|l\d+""")
+    private val TAG = Regex("""\[([^\[\]]*)]""")
     private val DISAMBIGUATION_SUFFIX = Regex(""" \(\d+\)$""")
     private val ENTITY = Regex("""&(#[xX][0-9a-fA-F]{1,6}|#\d{1,7}|[a-zA-Z]+);""")
     private val CLOSING_PUNCTUATION = setOf(',', '.', ';', ':', '!', '?', ')', ']', '}')
@@ -202,4 +231,10 @@ object DiscogsMarkupParser {
         "nbsp" to 0xA0, "ndash" to 0x2013, "mdash" to 0x2014, "hellip" to 0x2026,
         "lsquo" to 0x2018, "rsquo" to 0x2019, "ldquo" to 0x201C, "rdquo" to 0x201D,
     )
+}
+
+/** A Discogs id reference in a bio (`[a1001]`, `[r=2001]`, `[m3001]`) that `proxy/entity/resolve` can name. */
+data class EntityRef(val type: Type, val id: Long) {
+    /** The entity kind; [wireName] is both the endpoint's `type` value and the Discogs URL segment. */
+    enum class Type(val wireName: String) { ARTIST("artist"), RELEASE("release"), MASTER("master") }
 }

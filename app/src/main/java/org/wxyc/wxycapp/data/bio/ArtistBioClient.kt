@@ -7,6 +7,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Fetches the server's pre-parsed artist bio (`bioTokens`, LML's `profile_tokens`), which
@@ -20,6 +21,35 @@ import okhttp3.Request
  * @param baseUrl the API origin with no trailing slash, e.g. `https://api.wxyc.org`.
  */
 class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl: String) {
+
+    /** Entity names already resolved this process; Discogs names rarely change. */
+    private val names = ConcurrentHashMap<EntityRef, String>()
+
+    /**
+     * The best rendering the server can help with for [bio], or null to keep the local
+     * parse: the server's [bioTokens] when there are any, otherwise [bio] parsed with its
+     * id references resolved through [resolveEntity]. Blocking.
+     */
+    fun renderedBio(artistName: String, releaseTitle: String?, bio: String): List<BioToken>? {
+        bioTokens(artistName, releaseTitle)?.let { return it }
+        val resolved = DiscogsMarkupParser.entityReferences(bio).take(MAX_RESOLVED_PER_BIO)
+            .mapNotNull { ref -> resolveEntity(ref)?.let { ref to it } }
+            .toMap()
+        return resolved.takeIf { it.isNotEmpty() }?.let { DiscogsMarkupParser.parse(bio, it) }
+    }
+
+    /** The Discogs name for [ref] from `proxy/entity/resolve`, or null when it cannot be had. Blocking. */
+    fun resolveEntity(ref: EntityRef): String? = names[ref] ?: try {
+        val url = url("/proxy/entity/resolve")
+            .addQueryParameter("type", ref.type.wireName)
+            .addQueryParameter("id", ref.id.toString())
+            .build()
+        get(url)["name"]?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
+            ?.also { names[ref] = it }
+    } catch (e: Exception) {
+        Log.w(TAG, "Entity ${ref.type.wireName} unresolved: ${e.javaClass.simpleName} ${e.message.orEmpty()}")
+        null
+    }
 
     /**
      * The bio tokens for the artist of [artistName]'s [releaseTitle]. [BioTokensResult.NoTokens]
@@ -54,6 +84,9 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
 
     companion object {
         private const val TAG = "ArtistBioClient"
+
+        /** Bounds the calls one bio can cost against the proxy's 120 per minute per user. */
+        private const val MAX_RESOLVED_PER_BIO = 20
 
         /**
          * Maps one `DiscogsResolvedToken` to a [BioToken] with iOS `ResolvedBioToken`'s rules:
