@@ -99,8 +99,10 @@ fun PlayerScreen(
     // Show playcut detail sheet
     if (showDetailSheet) {
         selectedPlaycut?.let { playcut ->
+            LaunchedEffect(playcut.id) { viewModel.loadBioTokens(playcut) }
             PlaycutDetailSheet(
                 playcut = playcut,
+                bioTokens = uiState.bioTokens[playcut.id],
                 onDismiss = {
                     showDetailSheet = false
                     selectedPlaycut = null

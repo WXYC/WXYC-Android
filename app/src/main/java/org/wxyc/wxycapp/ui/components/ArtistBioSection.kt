@@ -38,14 +38,16 @@ import org.wxyc.wxycapp.util.launchIntentSafely
 private const val COLLAPSED_LINES = 4
 
 /**
- * The "About the Artist" block: the artist bio with its Discogs markup rendered (see
- * [DiscogsMarkupParser]), collapsed to four lines behind a "Read More" toggle that appears
- * only when the rendered text actually overflows.
+ * The "About the Artist" block: the artist bio with its Discogs markup rendered, collapsed
+ * to four lines behind a "Read More" toggle that appears only when the rendered text
+ * actually overflows.
+ *
+ * @param tokens the server's pre-parsed bio, when it has arrived; see [bioTokensToShow].
  */
 @Composable
-fun ArtistBioSection(bio: String, modifier: Modifier = Modifier) {
+fun ArtistBioSection(bio: String, modifier: Modifier = Modifier, tokens: List<BioToken>? = null) {
     val linkColor = Color.White.copy(alpha = 0.7f)
-    val rendered = remember(bio) { DiscogsMarkupParser.parse(bio).toBioAnnotatedString(linkColor) }
+    val rendered = remember(bio, tokens) { bioTokensToShow(bio, tokens).toBioAnnotatedString(linkColor) }
     // A bio made only of dropped id references renders as nothing; skip the header too.
     if (rendered.isBlank()) return
     var expanded by remember(bio) { mutableStateOf(false) }
@@ -91,6 +93,13 @@ fun ArtistBioSection(bio: String, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/**
+ * The server's [tokens] when there are any, as iOS prefers them; otherwise [bio] parsed
+ * with [DiscogsMarkupParser].
+ */
+fun bioTokensToShow(bio: String, tokens: List<BioToken>?): List<BioToken> =
+    tokens?.takeIf { it.isNotEmpty() } ?: DiscogsMarkupParser.parse(bio)
 
 /**
  * Renders parsed bio tokens: bold, italic and underline runs are styled, and artist and URL

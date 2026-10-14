@@ -13,12 +13,16 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.wxyc.wxycapp.data.Playcut
+import org.wxyc.wxycapp.data.bio.ArtistBioClient
+import org.wxyc.wxycapp.data.bio.BioToken
 import data.JsonImporter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.wxyc.wxycapp.analytics.PostHogManager
 import playback.AudioPlaybackService
 import java.util.concurrent.CopyOnWriteArrayList
@@ -29,13 +33,16 @@ data class PlayerUiState(
     val isPlaying: Boolean = false, // Represents if audio is actually playing (not muted/stopped)
     val isMuted: Boolean = true, // We map 'stopped/paused' to 'muted' in legacy UI context slightly, but let's stick to isPlaying
     val playlist: List<Playcut> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** Server-parsed artist bios by playcut id, loaded when a detail sheet opens. */
+    val bioTokens: Map<Int, List<BioToken>> = emptyMap()
 )
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val jsonImporter: JsonImporter
+    private val jsonImporter: JsonImporter,
+    private val artistBioClient: ArtistBioClient
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -142,6 +149,23 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    /**
+     * Loads the server-parsed bio for [playcut] into [PlayerUiState.bioTokens], once per
+     * playcut. Only playcuts that already show a bio are looked up: the tokens replace the
+     * raw bio's rendering and add nothing where there is no bio. On failure the sheet keeps
+     * the locally parsed bio.
+     */
+    fun loadBioTokens(playcut: Playcut) {
+        val artist = playcut.artistName ?: return
+        if (playcut.metadata?.artistBio == null || playcut.id in _uiState.value.bioTokens) return
+        viewModelScope.launch {
+            val tokens = withContext(Dispatchers.IO) {
+                artistBioClient.bioTokens(artist, playcut.releaseTitle)
+            } ?: return@launch
+            _uiState.update { it.copy(bioTokens = it.bioTokens + (playcut.id to tokens)) }
+        }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }

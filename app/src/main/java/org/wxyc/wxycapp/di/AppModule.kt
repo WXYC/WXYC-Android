@@ -18,6 +18,7 @@ import org.wxyc.wxycapp.auth.AuthInterceptor
 import org.wxyc.wxycapp.auth.AuthWireClient
 import org.wxyc.wxycapp.auth.EncryptedSessionStore
 import org.wxyc.wxycapp.auth.KeystoreSessionCipher
+import org.wxyc.wxycapp.data.bio.ArtistBioClient
 import org.wxyc.wxycapp.requestline.DeviceFingerprintStore
 import org.wxyc.wxycapp.requestline.RequestLineClient
 import retrofit2.Retrofit
@@ -80,6 +81,11 @@ object AppModule {
         OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(authenticator, API_ORIGIN.toHttpUrl().host))
             .build()
+
+    @Provides
+    @Singleton
+    fun provideArtistBioClient(@Authenticated httpClient: OkHttpClient): ArtistBioClient =
+        ArtistBioClient(httpClient, API_ORIGIN)
 
     @Provides
     @Singleton
