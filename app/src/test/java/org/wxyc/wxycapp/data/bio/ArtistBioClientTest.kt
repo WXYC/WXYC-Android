@@ -10,6 +10,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -244,6 +245,7 @@ class ArtistBioClientTest {
         val rendered = runBlocking { client().renderedBio("Stereolab", null, bio) } as BioTokensResult.Found
 
         assertEquals(listOf("Name 1", "Name 2", "Name 3", "Name 4"), rendered.tokens.filterIsInstance<BioToken.ArtistLink>().map { it.name })
+        assertFalse("a partial result must not be kept for good", rendered.complete)
     }
 
     @Test
