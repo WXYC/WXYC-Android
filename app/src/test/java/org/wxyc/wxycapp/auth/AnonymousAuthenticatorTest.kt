@@ -46,6 +46,12 @@ class AnonymousAuthenticatorTest {
      * other session token gets a JWT that expires an hour after [now].
      */
     @Volatile private var storedSessionStatus = 200
+
+    /** Status `/auth/token` answers with for sessions this test's sign-ins created. */
+    @Volatile private var newSessionMintStatus = 200
+
+    /** When set, every sign-in answers this status, with this `Retry-After` if non-null. */
+    @Volatile private var signInFailure: Pair<Int, String?>? = null
     private var now = 1_000_000L
 
     @Before
@@ -55,13 +61,15 @@ class AnonymousAuthenticatorTest {
             override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
                 "/auth/sign-in/anonymous" -> {
                     val n = signIns.incrementAndGet()
-                    MockResponse().setBody("""{"token":"session-$n","user":{"id":"user-$n"}}""")
+                    signInFailure?.let { (code, retryAfter) ->
+                        MockResponse().setResponseCode(code).apply { retryAfter?.let { setHeader("Retry-After", it) } }
+                    } ?: MockResponse().setBody("""{"token":"session-$n","user":{"id":"user-$n"}}""")
                 }
                 "/auth/token" -> {
                     val n = mints.incrementAndGet()
                     val bearer = request.getHeader("Authorization")!!.removePrefix("Bearer ")
                     synchronized(mintedFor) { mintedFor += bearer }
-                    val status = if (bearer == "stored-session") storedSessionStatus else 200
+                    val status = if (bearer == "stored-session") storedSessionStatus else newSessionMintStatus
                     if (status != 200) MockResponse().setResponseCode(status)
                     else MockResponse().setBody("""{"token":"${fakeJwt(exp = now + 3_600, subject = "jwt-$n")}"}""")
                 }
@@ -230,5 +238,64 @@ class AnonymousAuthenticatorTest {
 
         assertEquals(1, signIns.get())
         assertEquals(listOf("session-1", "session-1"), mintedFor)
+    }
+
+    @Test
+    fun `after a failed sign-in, waits out a cooldown before signing in again`() {
+        // Retry-After shorter than the cooldown, absent, unparseable, and longer than it.
+        val cases = listOf("30" to 300L, null to 300L, "soon" to 300L, "900" to 900L)
+        for ((retryAfter, wait) in cases) {
+            signIns.set(0)
+            signInFailure = 429 to retryAfter
+            val auth = authenticator()
+
+            assertThrows(AuthHttpException::class.java) { auth.token() }
+            now += wait - 1
+            assertThrows("Retry-After $retryAfter", AuthCooldownException::class.java) { auth.token() }
+            assertEquals("Retry-After $retryAfter", 1, signIns.get())
+
+            signInFailure = null
+            now += 1
+            auth.token()
+            assertEquals("Retry-After $retryAfter", 2, signIns.get())
+        }
+    }
+
+    @Test
+    fun `a transport failure during sign-in also starts the cooldown`() {
+        server.shutdown()
+        val auth = authenticator()
+
+        assertThrows(java.io.IOException::class.java) { auth.token() }
+        assertThrows(AuthCooldownException::class.java) { auth.token() }
+    }
+
+    @Test
+    fun `keeps a new session whose first mint failed, and mints from it next time`() {
+        newSessionMintStatus = 500
+        val store = FakeSessionStore()
+        val auth = authenticator(store)
+
+        assertThrows(AuthHttpException::class.java) { auth.token() }
+        assertEquals("session-1", store.stored?.sessionToken)
+
+        newSessionMintStatus = 200
+        auth.token()
+
+        assertEquals(1, signIns.get())
+        assertEquals(listOf("session-1", "session-1"), mintedFor)
+        assertEquals("user-1", store.stored?.userId)
+    }
+
+    @Test
+    fun `a kept session survives a restart`() {
+        newSessionMintStatus = 500
+        val store = FakeSessionStore()
+        assertThrows(AuthHttpException::class.java) { authenticator(store).token() }
+
+        newSessionMintStatus = 200
+        authenticator(store).token()
+
+        assertEquals(1, signIns.get())
     }
 }
