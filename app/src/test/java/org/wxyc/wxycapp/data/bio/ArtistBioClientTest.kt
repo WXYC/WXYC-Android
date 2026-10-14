@@ -2,8 +2,10 @@ package org.wxyc.wxycapp.data.bio
 
 import com.google.gson.JsonParser
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -142,5 +144,83 @@ class ArtistBioClientTest {
     @Test
     fun `drops unknown token types`() {
         assertNull(ArtistBioClient.decodeToken(JsonParser.parseString("""{"type":"poem","text":"x"}""").asJsonObject))
+    }
+
+    /** Serves an album with [discogsArtistId], an artist with [bioTokens], and [names] by "type-id". */
+    private fun route(discogsArtistId: Int?, bioTokens: String?, names: Map<String, String>) {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val url = request.requestUrl!!
+                return when (url.encodedPath) {
+                    "/proxy/metadata/album" ->
+                        MockResponse().setBody(discogsArtistId?.let { """{"discogsArtistId":$it}""" } ?: "{}")
+                    "/proxy/metadata/artist" -> MockResponse().setBody("""{"bioTokens":${bioTokens ?: "null"}}""")
+                    "/proxy/entity/resolve" -> names["${url.queryParameter("type")}-${url.queryParameter("id")}"]
+                        ?.let { MockResponse().setBody("""{"name":"$it","type":"artist","id":1}""") }
+                        ?: MockResponse().setResponseCode(404)
+                    else -> MockResponse().setResponseCode(500)
+                }
+            }
+        }
+    }
+
+    private fun paths() = (1..server.requestCount).map { server.takeRequest().requestUrl!!.encodedPath }
+
+    @Test
+    fun `renders the server tokens when there are any, without resolving ids`() {
+        route(discogsArtistId = 7, bioTokens = """[{"type":"plainText","text":"From London."}]""", names = mapOf("artist-1001" to "x"))
+
+        val rendered = client().renderedBio("Stereolab", null, "Founded by [a1001].")
+
+        assertEquals(listOf(BioToken.PlainText("From London.")), rendered)
+        assertEquals(listOf("/proxy/metadata/album", "/proxy/metadata/artist"), paths())
+    }
+
+    @Test
+    fun `otherwise resolves the raw bio's ids and renders them as links`() {
+        route(discogsArtistId = null, bioTokens = null, names = mapOf("artist-1001" to "Lætitia Sadier"))
+
+        val rendered = client().renderedBio("Stereolab", null, "Founded by [a1001].")
+
+        assertEquals(
+            listOf(
+                BioToken.PlainText("Founded by "),
+                BioToken.ArtistLink("Lætitia Sadier", "Lætitia Sadier", "https://www.discogs.com/artist/1001"),
+                BioToken.PlainText("."),
+            ),
+            rendered,
+        )
+        val resolve = paths().last()
+        assertEquals("/proxy/entity/resolve", resolve)
+    }
+
+    @Test
+    fun `returns null when the bio has no ids or none resolve`() {
+        for (bio in listOf("Formed in London.", "Founded by [a1001].")) {
+            route(discogsArtistId = null, bioTokens = null, names = emptyMap())
+            assertNull(bio, client().renderedBio("Stereolab", null, bio))
+        }
+    }
+
+    @Test
+    fun `resolves an entity once and remembers it`() {
+        route(discogsArtistId = null, bioTokens = null, names = mapOf("master-3001" to "Dots And Loops"))
+        val client = client()
+        val ref = EntityRef(EntityRef.Type.MASTER, 3001)
+
+        assertEquals("Dots And Loops", client.resolveEntity(ref))
+        assertEquals("Dots And Loops", client.resolveEntity(ref))
+
+        val recorded = server.takeRequest().requestUrl!!
+        assertEquals("master", recorded.queryParameter("type"))
+        assertEquals("3001", recorded.queryParameter("id"))
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `an unresolvable entity is null`() {
+        route(discogsArtistId = null, bioTokens = null, names = emptyMap())
+
+        assertNull(client().resolveEntity(EntityRef(EntityRef.Type.ARTIST, 1)))
     }
 }
