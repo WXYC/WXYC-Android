@@ -3,6 +3,7 @@ package org.wxyc.wxycapp.auth
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.core.content.edit
@@ -12,6 +13,7 @@ import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.toByteString
 import java.io.IOException
 import java.security.KeyStore
+import java.security.UnrecoverableKeyException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -85,25 +87,42 @@ class EncryptedSessionStore(
 class KeystoreSessionCipher(private val alias: String = "wxyc_auth_session") : SessionCipher {
 
     override fun encrypt(plaintext: ByteArray): ByteArray {
-        val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key()) }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        try {
+            cipher.init(Cipher.ENCRYPT_MODE, key())
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            discardKey()
+            cipher.init(Cipher.ENCRYPT_MODE, key())
+        }
         return cipher.iv + cipher.doFinal(plaintext)
     }
 
     override fun decrypt(ciphertext: ByteArray): ByteArray {
         val spec = GCMParameterSpec(TAG_BITS, ciphertext, 0, IV_BYTES)
-        val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.DECRYPT_MODE, key(), spec) }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        try {
+            cipher.init(Cipher.DECRYPT_MODE, key(), spec)
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            // Whatever this key encrypted is gone; the store clears it and signs in again.
+            discardKey()
+            throw e
+        }
         return cipher.doFinal(ciphertext, IV_BYTES, ciphertext.size - IV_BYTES)
     }
 
     /**
-     * The alias's key, generating it if absent. An alias whose key will not load (a
-     * corrupted entry, or a non-AES key under the same name) is deleted and regenerated;
-     * any session encrypted under it is unreadable anyway and is cleared on load.
+     * The alias's AES key, generating it if absent. Only an unrecoverable entry is replaced:
+     * one whose key throws [UnrecoverableKeyException], loads as null, or is not a secret
+     * key. Any other Keystore error propagates and the key is left alone.
      */
     @Synchronized
     private fun key(): SecretKey {
-        val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-        val existing = runCatching { keyStore.getKey(alias, null) }.getOrNull()
+        val keyStore = keyStore()
+        val existing = try {
+            keyStore.getKey(alias, null)
+        } catch (e: UnrecoverableKeyException) {
+            null
+        }
         if (existing is SecretKey) return existing
         if (keyStore.containsAlias(alias)) {
             Log.w(TAG, "Regenerating an auth session key that would not load")
@@ -115,6 +134,14 @@ class KeystoreSessionCipher(private val alias: String = "wxyc_auth_session") : S
             .build()
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).apply { init(spec) }.generateKey()
     }
+
+    @Synchronized
+    private fun discardKey() {
+        Log.w(TAG, "Discarding a permanently invalidated auth session key")
+        keyStore().deleteEntry(alias)
+    }
+
+    private fun keyStore(): KeyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
 
     private companion object {
         const val TAG = "KeystoreSessionCipher"
