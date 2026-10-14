@@ -70,4 +70,18 @@ class ArtistBioTextTest {
         assertTrue(rendered.getLinkAnnotations(0, rendered.length).isEmpty())
         assertEquals(TextDecoration.Underline, rendered.spanStyles.single().item.textDecoration)
     }
+
+    @Test
+    fun `prefers server tokens over parsing the raw bio`() {
+        val raw = "[b]Stereolab[/b] formed in London."
+        val served = listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London, 1990."))
+        val cases = listOf(
+            served to served,
+            null to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
+            emptyList<BioToken>() to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
+        )
+        for ((tokens, expected) in cases) {
+            assertEquals("for $tokens", expected, bioTokensToShow(raw, tokens))
+        }
+    }
 }

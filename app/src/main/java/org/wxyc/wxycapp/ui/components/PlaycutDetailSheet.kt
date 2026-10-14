@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import org.wxyc.wxycapp.data.Playcut
 import org.wxyc.wxycapp.data.PlaycutMetadata
 import org.wxyc.wxycapp.data.StreamingService
+import org.wxyc.wxycapp.data.bio.BioToken
 
 /**
  * Bottom sheet displaying detailed information about a playcut
@@ -23,7 +24,8 @@ fun PlaycutDetailSheet(
     onDismiss: () -> Unit,
     onStreamingServiceTapped: (StreamingService) -> Unit = {},
     onExternalLinkTapped: (String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bioTokens: List<BioToken>? = null
 ) {
     val artworkUrl = playcut.imageURL
     val metadata = playcut.metadata ?: PlaycutMetadata.EMPTY
@@ -77,7 +79,8 @@ fun PlaycutDetailSheet(
             // Metadata section (label, year, bio)
             if (metadata.label != null || metadata.releaseYear != null || metadata.artistBio != null) {
                 PlaycutMetadataSection(
-                    metadata = metadata
+                    metadata = metadata,
+                    bioTokens = bioTokens
                 )
             }
 

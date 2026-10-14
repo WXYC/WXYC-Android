@@ -10,14 +10,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.wxyc.wxycapp.data.PlaycutMetadata
+import org.wxyc.wxycapp.data.bio.BioToken
 
 /**
- * Metadata section showing label, year, and artist bio
+ * Metadata section showing label, year, and artist bio. [bioTokens] is the server's
+ * pre-parsed bio, preferred over [PlaycutMetadata.artistBio] once it arrives.
  */
 @Composable
 fun PlaycutMetadataSection(
     metadata: PlaycutMetadata,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bioTokens: List<BioToken>? = null
 ) {
     Surface(
         modifier = modifier
@@ -76,7 +79,7 @@ fun PlaycutMetadataSection(
             }
             
             // Artist Bio
-            metadata.artistBio?.let { bio -> ArtistBioSection(bio = bio) }
+            metadata.artistBio?.let { bio -> ArtistBioSection(bio = bio, tokens = bioTokens) }
         }
     }
 }
