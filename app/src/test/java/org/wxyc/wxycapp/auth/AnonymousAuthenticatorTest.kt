@@ -54,6 +54,9 @@ class AnonymousAuthenticatorTest {
     @Volatile private var signInFailure: Pair<Int, String?>? = null
     private var now = 1_000_000L
 
+    /** Seconds since boot; drives only the sign-in cooldown. */
+    private var monotonic = 50L
+
     @Before
     fun setUp() {
         server = MockWebServer()
@@ -93,6 +96,7 @@ class AnonymousAuthenticatorTest {
         ),
         store = store,
         clock = { now },
+        monotonicClock = { monotonic },
     )
 
     private fun storedSession(jwtExpiresAt: Long) = AuthSession(
@@ -242,22 +246,62 @@ class AnonymousAuthenticatorTest {
 
     @Test
     fun `after a failed sign-in, waits out a cooldown before signing in again`() {
-        // Retry-After shorter than the cooldown, absent, unparseable, and longer than it.
-        val cases = listOf("30" to 300L, null to 300L, "soon" to 300L, "900" to 900L)
+        // Retry-After is clamped to [300, 3600]; absent or unparseable means 300.
+        val cases = listOf(
+            "30" to 300L, null to 300L, "soon" to 300L, "900" to 900L,
+            "86400" to 3_600L, "9223372036854775807" to 3_600L,
+        )
         for ((retryAfter, wait) in cases) {
             signIns.set(0)
             signInFailure = 429 to retryAfter
             val auth = authenticator()
 
             assertThrows(AuthHttpException::class.java) { auth.token() }
-            now += wait - 1
+            monotonic += wait - 1
             assertThrows("Retry-After $retryAfter", AuthCooldownException::class.java) { auth.token() }
             assertEquals("Retry-After $retryAfter", 1, signIns.get())
 
             signInFailure = null
-            now += 1
+            monotonic += 1
             auth.token()
             assertEquals("Retry-After $retryAfter", 2, signIns.get())
+        }
+    }
+
+    @Test
+    fun `the cooldown follows time since boot, not the wall clock`() {
+        signInFailure = 429 to null
+        val auth = authenticator()
+        assertThrows(AuthHttpException::class.java) { auth.token() }
+        signInFailure = null
+
+        // The wall clock is corrected by a day; the cooldown must neither end nor stretch.
+        now += 86_400
+        assertThrows(AuthCooldownException::class.java) { auth.token() }
+        now -= 2 * 86_400
+        monotonic += 300
+        auth.token()
+
+        assertEquals(2, signIns.get())
+    }
+
+    @Test
+    fun `a new session whose first mint is rejected is dropped and starts the cooldown`() {
+        for (status in listOf(401, 404)) {
+            signIns.set(0)
+            newSessionMintStatus = status
+            val store = FakeSessionStore()
+            val auth = authenticator(store)
+
+            assertThrows(AuthHttpException::class.java) { auth.token() }
+            assertThrows("after $status", AuthCooldownException::class.java) { auth.token() }
+            assertEquals("after $status", 1, signIns.get())
+            assertNull("after $status", store.stored)
+
+            newSessionMintStatus = 200
+            monotonic += 300
+            auth.token()
+            assertEquals("after $status", 2, signIns.get())
         }
     }
 
