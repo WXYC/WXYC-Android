@@ -46,7 +46,7 @@ class AnonymousAuthenticator(
     private val store: SessionStore,
     private val clock: () -> Long = { System.currentTimeMillis() / 1000 },
     private val monotonicClock: () -> Long = { SystemClock.elapsedRealtime() / 1000 },
-) {
+) : BearerTokenProvider {
     private var cached: AuthSession? = null
 
     /** [monotonicClock] second before which no sign-in is attempted; null when not cooling down. */
@@ -54,7 +54,7 @@ class AnonymousAuthenticator(
 
     /** A JWT to send as `Authorization: Bearer`, refreshing the session if needed. */
     @Synchronized
-    fun token(): String {
+    override fun token(): String {
         cached?.takeUnless { it.isStale() }?.let { return it.jwt }
         return refresh(trustStoredJwt = true)
     }
@@ -67,7 +67,7 @@ class AnonymousAuthenticator(
      * on this device and still be rejected.
      */
     @Synchronized
-    fun reauthenticate(rejectedJwt: String): String {
+    override fun reauthenticate(rejectedJwt: String): String {
         cached?.takeIf { it.jwt != rejectedJwt && !it.isStale() }?.let { return it.jwt }
         return refresh(trustStoredJwt = false)
     }
