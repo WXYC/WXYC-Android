@@ -42,9 +42,9 @@ class ArtistBioClientTest {
             )
         )
 
-        val tokens = client().bioTokens(artistName = "Stereolab", releaseTitle = "Aluminum Tunes")
+        val result = client().bioTokens(artistName = "Stereolab", releaseTitle = "Aluminum Tunes")
 
-        assertEquals(listOf(BioToken.PlainText("Formed in London.")), tokens)
+        assertEquals(BioTokensResult.Found(listOf(BioToken.PlainText("Formed in London."))), result)
         val album = server.takeRequest().requestUrl!!
         assertEquals("/proxy/metadata/album", album.encodedPath)
         assertEquals("Stereolab", album.queryParameter("artistName"))
@@ -64,34 +64,46 @@ class ArtistBioClientTest {
     }
 
     @Test
-    fun `returns null without an artist call when the album has no Discogs artist`() {
+    fun `reports no tokens, without an artist call, when the album has no Discogs artist`() {
         enqueueAlbum(discogsArtistId = null)
 
-        assertNull(client().bioTokens("Stereolab", "Aluminum Tunes"))
+        assertEquals(BioTokensResult.NoTokens, client().bioTokens("Stereolab", "Aluminum Tunes"))
         assertEquals(1, server.requestCount)
     }
 
     @Test
-    fun `returns null when the artist has no usable tokens`() {
-        val bodies = listOf("""{"bio":"raw"}""", """{"bioTokens":null}""", """{"bioTokens":[]}""", """{"bioTokens":[{"type":"poem"}]}""")
-        for (body in bodies) {
+    fun `reports no tokens when the artist has none or is not found`() {
+        val responses = listOf(
+            MockResponse().setBody("""{"bio":"raw"}"""),
+            MockResponse().setBody("""{"bioTokens":null}"""),
+            MockResponse().setBody("""{"bioTokens":[]}"""),
+            MockResponse().setBody("""{"bioTokens":[{"type":"poem"}]}"""),
+            MockResponse().setResponseCode(404),
+        )
+        for (response in responses) {
             enqueueAlbum(discogsArtistId = 1)
-            server.enqueue(MockResponse().setBody(body))
-            assertNull(body, client().bioTokens("Stereolab", null))
+            server.enqueue(response)
+            assertEquals(response.toString(), BioTokensResult.NoTokens, client().bioTokens("Stereolab", null))
         }
     }
 
     @Test
-    fun `returns null on any failure`() {
+    fun `reports a failure, distinct from no tokens, when either call fails`() {
         val failures = listOf(
             MockResponse().setResponseCode(401),
+            MockResponse().setResponseCode(404),
             MockResponse().setResponseCode(429),
             MockResponse().setBody("not json"),
             MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START),
         )
         for (failure in failures) {
             server.enqueue(failure)
-            assertNull(client().bioTokens("Stereolab", null))
+            assertEquals("album $failure", BioTokensResult.Failed, client().bioTokens("Stereolab", null))
+        }
+        for (failure in failures.filterNot { it.status.contains("404") }) {
+            enqueueAlbum(discogsArtistId = 1)
+            server.enqueue(failure)
+            assertEquals("artist $failure", BioTokensResult.Failed, client().bioTokens("Stereolab", null))
         }
     }
 

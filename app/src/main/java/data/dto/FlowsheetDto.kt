@@ -39,7 +39,8 @@ data class FlowsheetEntryDto(
     val artistWikipediaUrl: String? = null,
     val message: String? = null,
     val djName: String? = null,
-    val radioHour: String? = null
+    val radioHour: String? = null,
+    val metadataStatus: String? = null
 ) {
     fun toDomain(): Playcut {
         val metadata = if (entryType == "track") {
@@ -70,7 +71,8 @@ data class FlowsheetEntryDto(
             releaseTitle = albumTitle,
             imageURL = artworkUrl,
             metadata = metadata,
-            displayMessage = markerLabel()
+            displayMessage = markerLabel(),
+            metadataStatus = metadataStatus
         )
     }
 

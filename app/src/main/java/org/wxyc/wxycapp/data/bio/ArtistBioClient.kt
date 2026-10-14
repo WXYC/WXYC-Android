@@ -22,28 +22,32 @@ import okhttp3.Request
 class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl: String) {
 
     /**
-     * The bio tokens for the artist of [artistName]'s [releaseTitle], or null when there are
-     * none or anything fails; the caller then keeps parsing the raw bio. Blocking.
+     * The bio tokens for the artist of [artistName]'s [releaseTitle]. [BioTokensResult.NoTokens]
+     * means the server answered and has none to give (no Discogs artist, a 404, or no
+     * tokens); [BioTokensResult.Failed] means a call failed and nothing is known. Blocking.
      */
-    fun bioTokens(artistName: String, releaseTitle: String?): List<BioToken>? = try {
-        val album = get(url("/proxy/metadata/album").addQueryParameter("artistName", artistName)
-            .apply { releaseTitle?.let { addQueryParameter("releaseTitle", it) } }.build())
-        album.number("discogsArtistId")?.let { artistId ->
-            val artist = get(url("/proxy/metadata/artist").addQueryParameter("artistId", artistId.toString()).build())
-            artist["bioTokens"]?.takeIf { it.isJsonArray }?.asJsonArray
-                ?.mapNotNull { element -> element.takeIf { it.isJsonObject }?.let { decodeToken(it.asJsonObject) } }
-                ?.takeIf { tokens -> tokens.any { it.text.isNotEmpty() } }
-        }
+    fun bioTokens(artistName: String, releaseTitle: String?): BioTokensResult = try {
+        val albumUrl = url("/proxy/metadata/album").addQueryParameter("artistName", artistName)
+            .apply { releaseTitle?.let { addQueryParameter("releaseTitle", it) } }.build()
+        val artistId = (get(albumUrl) ?: error("HTTP 404")).number("discogsArtistId")
+        val artist = artistId?.let { get(url("/proxy/metadata/artist").addQueryParameter("artistId", it.toString()).build()) }
+        artist?.get("bioTokens")?.takeIf { it.isJsonArray }?.asJsonArray
+            ?.mapNotNull { element -> element.takeIf { it.isJsonObject }?.let { decodeToken(it.asJsonObject) } }
+            ?.takeIf { tokens -> tokens.any { it.text.isNotEmpty() } }
+            ?.let { BioTokensResult.Found(it) }
+            ?: BioTokensResult.NoTokens
     } catch (e: Exception) {
         // Status and class name only: the request carried a bearer JWT.
         Log.w(TAG, "Artist bio tokens unavailable: ${e.javaClass.simpleName} ${e.message.orEmpty()}")
-        null
+        BioTokensResult.Failed
     }
 
     private fun url(path: String): HttpUrl.Builder = "$baseUrl$path".toHttpUrl().newBuilder()
 
-    private fun get(url: HttpUrl): JsonObject =
+    /** The JSON object at [url], or null for a 404 (a confirmed absence); throws on any other failure. */
+    private fun get(url: HttpUrl): JsonObject? =
         httpClient.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+            if (response.code == 404) return null
             check(response.isSuccessful) { "HTTP ${response.code}" }
             JsonParser.parseString(response.body?.string().orEmpty()).asJsonObject
         }
@@ -89,4 +93,16 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
         private fun JsonObject.number(key: String): Long? =
             get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asLong
     }
+}
+
+/** What [ArtistBioClient.bioTokens] learned. */
+sealed interface BioTokensResult {
+    /** The server's parsed bio. */
+    data class Found(val tokens: List<BioToken>) : BioTokensResult
+
+    /** The server answered and has no tokens for this artist. */
+    object NoTokens : BioTokensResult
+
+    /** A call failed; whether tokens exist is unknown. */
+    object Failed : BioTokensResult
 }

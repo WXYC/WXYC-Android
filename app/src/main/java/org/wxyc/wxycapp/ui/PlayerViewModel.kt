@@ -14,7 +14,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.wxyc.wxycapp.data.Playcut
 import org.wxyc.wxycapp.data.bio.ArtistBioClient
+import org.wxyc.wxycapp.data.bio.BioFetchPolicy
 import org.wxyc.wxycapp.data.bio.BioToken
+import org.wxyc.wxycapp.data.bio.BioTokensResult
+import org.wxyc.wxycapp.data.bio.RecentMisses
 import data.JsonImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +57,7 @@ class PlayerViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "PlayerViewModel"
+        private const val BIO_MISS_TTL_SECONDS = 300L
     }
 
     init {
@@ -149,20 +153,25 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    /** Playcuts whose bio lookup just missed; not retried for a few minutes. */
+    private val bioMisses = RecentMisses(ttlSeconds = BIO_MISS_TTL_SECONDS)
+
     /**
      * Loads the server-parsed bio for [playcut] into [PlayerUiState.bioTokens], once per
-     * playcut. Only playcuts that already show a bio are looked up: the tokens replace the
-     * raw bio's rendering and add nothing where there is no bio. On failure the sheet keeps
-     * the locally parsed bio.
+     * playcut, when [BioFetchPolicy.shouldFetch] allows it. A lookup that finds nothing or
+     * fails is not repeated for [BIO_MISS_TTL_SECONDS]; meanwhile the sheet keeps the
+     * locally parsed bio.
      */
     fun loadBioTokens(playcut: Playcut) {
         val artist = playcut.artistName ?: return
-        if (playcut.metadata?.artistBio == null || playcut.id in _uiState.value.bioTokens) return
+        if (!BioFetchPolicy.shouldFetch(playcut) || playcut.id in _uiState.value.bioTokens || bioMisses.isRecent(playcut.id)) return
         viewModelScope.launch {
-            val tokens = withContext(Dispatchers.IO) {
-                artistBioClient.bioTokens(artist, playcut.releaseTitle)
-            } ?: return@launch
-            _uiState.update { it.copy(bioTokens = it.bioTokens + (playcut.id to tokens)) }
+            val result = withContext(Dispatchers.IO) { artistBioClient.bioTokens(artist, playcut.releaseTitle) }
+            if (result !is BioTokensResult.Found) {
+                bioMisses.record(playcut.id)
+                return@launch
+            }
+            _uiState.update { it.copy(bioTokens = it.bioTokens + (playcut.id to result.tokens)) }
         }
     }
 
