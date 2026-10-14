@@ -95,11 +95,12 @@ fun ArtistBioSection(bio: String, modifier: Modifier = Modifier, tokens: List<Bi
 }
 
 /**
- * The server's [tokens] when there are any, as iOS prefers them; otherwise [bio] parsed
- * with [DiscogsMarkupParser].
+ * The server's [tokens] when they have visible text, as iOS prefers them; otherwise [bio]
+ * parsed with [DiscogsMarkupParser]. Unlike iOS, tokens with nothing to show fall back to
+ * the raw bio instead of rendering an empty section.
  */
 fun bioTokensToShow(bio: String, tokens: List<BioToken>?): List<BioToken> =
-    tokens?.takeIf { it.isNotEmpty() } ?: DiscogsMarkupParser.parse(bio)
+    tokens?.takeIf { list -> list.any { it.text.isNotBlank() } } ?: DiscogsMarkupParser.parse(bio)
 
 /**
  * Renders parsed bio tokens: bold, italic and underline runs are styled, and artist and URL
