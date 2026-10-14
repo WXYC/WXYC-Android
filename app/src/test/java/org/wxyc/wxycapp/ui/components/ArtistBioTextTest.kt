@@ -78,7 +78,10 @@ class ArtistBioTextTest {
         val cases = listOf(
             served to served,
             null to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
+            // Tokens with nothing to show fall back to the raw bio rather than hiding it.
             emptyList<BioToken>() to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
+            listOf(BioToken.PlainText("")) to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
+            listOf(BioToken.PlainText(" \n ")) to listOf(BioToken.Bold("Stereolab"), BioToken.PlainText(" formed in London.")),
         )
         for ((tokens, expected) in cases) {
             assertEquals("for $tokens", expected, bioTokensToShow(raw, tokens))

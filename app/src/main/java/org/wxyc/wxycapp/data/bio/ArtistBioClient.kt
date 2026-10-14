@@ -23,13 +23,13 @@ class ArtistBioClient(private val httpClient: OkHttpClient, private val baseUrl:
 
     /**
      * The bio tokens for the artist of [artistName]'s [releaseTitle]. [BioTokensResult.NoTokens]
-     * means the server answered and has none to give (no Discogs artist, a 404, or no
-     * tokens); [BioTokensResult.Failed] means a call failed and nothing is known. Blocking.
+     * means the server answered and has none to give (no Discogs artist, a 404 from either
+     * route, or no tokens); [BioTokensResult.Failed] means a call failed and nothing is known. Blocking.
      */
     fun bioTokens(artistName: String, releaseTitle: String?): BioTokensResult = try {
         val albumUrl = url("/proxy/metadata/album").addQueryParameter("artistName", artistName)
             .apply { releaseTitle?.let { addQueryParameter("releaseTitle", it) } }.build()
-        val artistId = (get(albumUrl) ?: error("HTTP 404")).number("discogsArtistId")
+        val artistId = get(albumUrl)?.number("discogsArtistId")
         val artist = artistId?.let { get(url("/proxy/metadata/artist").addQueryParameter("artistId", it.toString()).build()) }
         artist?.get("bioTokens")?.takeIf { it.isJsonArray }?.asJsonArray
             ?.mapNotNull { element -> element.takeIf { it.isJsonObject }?.let { decodeToken(it.asJsonObject) } }

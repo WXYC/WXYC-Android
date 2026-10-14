@@ -64,11 +64,13 @@ class ArtistBioClientTest {
     }
 
     @Test
-    fun `reports no tokens, without an artist call, when the album has no Discogs artist`() {
+    fun `reports no tokens, without an artist call, when the album has no Discogs artist or is not found`() {
         enqueueAlbum(discogsArtistId = null)
+        server.enqueue(MockResponse().setResponseCode(404))
 
         assertEquals(BioTokensResult.NoTokens, client().bioTokens("Stereolab", "Aluminum Tunes"))
-        assertEquals(1, server.requestCount)
+        assertEquals(BioTokensResult.NoTokens, client().bioTokens("Stereolab", "Aluminum Tunes"))
+        assertEquals(2, server.requestCount)
     }
 
     @Test
@@ -96,11 +98,12 @@ class ArtistBioClientTest {
             MockResponse().setBody("not json"),
             MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START),
         )
-        for (failure in failures) {
+        val notFound = failures.filterNot { it.status.contains("404") }
+        for (failure in notFound) {
             server.enqueue(failure)
             assertEquals("album $failure", BioTokensResult.Failed, client().bioTokens("Stereolab", null))
         }
-        for (failure in failures.filterNot { it.status.contains("404") }) {
+        for (failure in notFound) {
             enqueueAlbum(discogsArtistId = 1)
             server.enqueue(failure)
             assertEquals("artist $failure", BioTokensResult.Failed, client().bioTokens("Stereolab", null))
