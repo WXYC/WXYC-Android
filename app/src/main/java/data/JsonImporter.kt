@@ -10,6 +10,6 @@ class JsonImporter @Inject constructor(
     // which sets errorMessage and reports to analytics — swallowing it here made
     // that error path unreachable and a failed poll render as a silently empty list.
     suspend fun fetchPlaylist(): List<Playcut> {
-        return api.getFlowsheet(35).entries.map { it.toDomain() }
+        return api.getFlowsheet(35).toPlaycuts()
     }
 }

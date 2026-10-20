@@ -10,6 +10,14 @@ import java.util.TimeZone
 
 data class FlowsheetResponseDto(
     val entries: List<FlowsheetEntryDto>
+) {
+    // The server adds entry types without a coordinated client release, so rows
+    // this app cannot render are dropped here rather than shown as raw type text.
+    fun toPlaycuts(): List<Playcut> = entries.filter { it.entryType in KNOWN_ENTRY_TYPES }.map { it.toDomain() }
+}
+
+private val KNOWN_ENTRY_TYPES = setOf(
+    "track", "talkset", "message", "breakpoint", "show_start", "show_end", "dj_join", "dj_leave"
 )
 
 // Covers all eight FlowsheetV2*Entry variants api.yaml's discriminator lists
