@@ -136,4 +136,30 @@ class FlowsheetDtoTest {
         val json = """{"id":1,"show_id":1,"play_order":1,"add_time":"not-a-timestamp","entry_type":"talkset","message":"Talkset"}"""
         assertNull(parse(json).toDomain().hour)
     }
+
+    private fun row(id: Int, type: String) =
+        """{"id":$id,"show_id":1,"play_order":$id,"add_time":"2026-09-12T20:44:22.679Z","entry_type":"$type","message":"m","dj_name":"DJ"}"""
+
+    private fun parseResponse(vararg types: String): FlowsheetResponseDto =
+        gson.fromJson(
+            """{"entries":[${types.mapIndexed { i, t -> row(i + 1, t) }.joinToString(",")}]}""",
+            FlowsheetResponseDto::class.java
+        )
+
+    @Test
+    fun `unknown entry types are dropped and known rows keep their order`() {
+        val playcuts = parseResponse("track", "spotlight", "talkset", "future_type", "message").toPlaycuts()
+
+        assertEquals(listOf("track", "talkset", "message"), playcuts.map { it.entryType })
+        assertEquals(listOf(1, 3, 5), playcuts.map { it.id })
+    }
+
+    @Test
+    fun `every known entry type still maps`() {
+        val known = listOf(
+            "track", "talkset", "message", "breakpoint",
+            "show_start", "show_end", "dj_join", "dj_leave"
+        )
+        assertEquals(known, parseResponse(*known.toTypedArray()).toPlaycuts().map { it.entryType })
+    }
 }

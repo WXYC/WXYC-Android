@@ -47,7 +47,7 @@ fun PlaylistItem(
     // message) is a marker row rendered from the server's own label text.
     when (item.entryType) {
         "track" -> SongItem(playcut = item, modifier = modifier, onClick = onClick)
-        else -> MarkerItem(text = item.displayMessage ?: item.entryType.uppercase(), modifier = modifier)
+        else -> item.displayMessage?.let { MarkerItem(text = it, modifier = modifier) }
     }
 }
 
