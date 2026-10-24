@@ -130,6 +130,11 @@ class PlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        // Polling stops with the activity, but the foreground service keeps streaming, so
+        // clear the lead while the controller is still connected rather than leave a stale
+        // song or who's-on line on the notification and lock screen. The command is sent on
+        // the controller's binder before release, so it reaches the session first.
+        publishNowMetadata(null)
         controllerFuture?.let {
             MediaController.releaseFuture(it)
         }

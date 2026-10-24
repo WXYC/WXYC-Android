@@ -21,11 +21,12 @@ fun nowLead(playcuts: List<Playcut>, onAir: OnAir): NowMetadata? {
     val showId = live?.showId?.takeIf { it != 0 }
     val entry = live?.spotlight?.toDomain()
     val roleLine = entry?.displayMessage
-    val entryLeads = showId != null && entry != null && roleLine != null && entry.showId == showId &&
+    val entryLine = if (showId != null && entry != null && roleLine != null && entry.showId == showId &&
         (song == null || song.showId != showId || entry.playOrder > song.playOrder)
+    ) roleLine else null
 
     return when {
-        entryLeads -> NowMetadata(Lead.ENTRY, roleLine!!, live!!.djName, null)
+        entryLine != null -> NowMetadata(Lead.ENTRY, entryLine, live?.djName, null)
         song != null -> NowMetadata(Lead.SONG, song.songTitle.orEmpty(), song.artistName, song.imageURL)
         else -> null
     }
