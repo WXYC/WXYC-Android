@@ -1,6 +1,10 @@
 package data.dto
 
 import android.util.Log
+import com.google.gson.FieldNamingPolicy
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
+import com.google.gson.annotations.SerializedName
 import org.wxyc.wxycapp.data.Playcut
 import org.wxyc.wxycapp.data.PlaycutMetadata
 import java.text.SimpleDateFormat
@@ -9,15 +13,54 @@ import java.util.Locale
 import java.util.TimeZone
 
 data class FlowsheetResponseDto(
-    val entries: List<FlowsheetEntryDto>
+    val entries: List<FlowsheetEntryDto>,
+    // Held as a raw element because Gson maps an absent key and JSON null to the same
+    // Kotlin null, and api.yaml gives them different meanings (see [OnAir]).
+    @SerializedName("on_air") private val onAirRaw: JsonElement? = null
 ) {
+    val onAir: OnAir
+        get() = when {
+            onAirRaw == null -> OnAir.Unknown
+            onAirRaw.isJsonNull -> OnAir.Automation
+            else -> onAirGson.fromJson(onAirRaw, OnAir.Live::class.java)
+        }
+
     // The server adds entry types without a coordinated client release, so rows
     // this app cannot render are dropped here rather than shown as raw type text.
     fun toPlaycuts(): List<Playcut> = entries.filter { it.entryType in KNOWN_ENTRY_TYPES }.map { it.toDomain() }
 }
 
 private val KNOWN_ENTRY_TYPES = setOf(
-    "track", "talkset", "message", "breakpoint", "show_start", "show_end", "dj_join", "dj_leave"
+    "track", "talkset", "message", "breakpoint", "show_start", "show_end", "dj_join", "dj_leave",
+    "spotlight"
+)
+
+private val onAirGson = GsonBuilder()
+    .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+    .create()
+
+/** The three meanings of `on_air` in api.yaml: absent, `null`, and an object. */
+sealed interface OnAir {
+    /** Key absent: the server does not report on-air status. */
+    object Unknown : OnAir
+
+    /** JSON `null`: the station is confirmed on automation. */
+    object Automation : OnAir
+
+    /** A named DJ is live; [spotlight] is the show's current who's-on entry, if any. */
+    data class Live(
+        val djName: String,
+        val showId: Int? = null,
+        val spotlight: FlowsheetEntryDto? = null
+    ) : OnAir
+}
+
+// Role copy matches the iOS app word for word. `host` hands the focus back, so it has no line.
+private val SPOTLIGHT_ROLE_LINES = mapOf(
+    "guest" to "In the studio: %s",
+    "performer" to "Live in the studio: %s",
+    "reader" to "Reading now: %s",
+    "dj" to "Now mixing: %s",
 )
 
 // Covers all eight FlowsheetV2*Entry variants api.yaml's discriminator lists
@@ -48,7 +91,9 @@ data class FlowsheetEntryDto(
     val message: String? = null,
     val djName: String? = null,
     val radioHour: String? = null,
-    val metadataStatus: String? = null
+    val metadataStatus: String? = null,
+    val spotlightRole: String? = null,
+    val spotlightName: String? = null
 ) {
     fun toDomain(): Playcut {
         val metadata = if (entryType == "track") {
@@ -95,6 +140,10 @@ data class FlowsheetEntryDto(
         "show_end" -> djName?.let { "$it signed off" }
         "dj_join" -> djName?.let { "$it joined" }
         "dj_leave" -> djName?.let { "$it left" }
+        "spotlight" -> spotlightName?.let { name ->
+            if (spotlightRole == "host") null
+            else (SPOTLIGHT_ROLE_LINES[spotlightRole] ?: "On air: %s").format(name)
+        }
         else -> null
     }
 }

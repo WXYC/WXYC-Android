@@ -4,6 +4,7 @@ import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import data.WxycApi
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import retrofit2.http.Query
@@ -150,16 +151,56 @@ class FlowsheetDtoTest {
     fun `unknown entry types are dropped and known rows keep their order`() {
         val playcuts = parseResponse("track", "spotlight", "talkset", "future_type", "message").toPlaycuts()
 
-        assertEquals(listOf("track", "talkset", "message"), playcuts.map { it.entryType })
-        assertEquals(listOf(1, 3, 5), playcuts.map { it.id })
+        assertEquals(listOf("track", "spotlight", "talkset", "message"), playcuts.map { it.entryType })
+        assertEquals(listOf(1, 2, 3, 5), playcuts.map { it.id })
     }
 
     @Test
     fun `every known entry type still maps`() {
         val known = listOf(
             "track", "talkset", "message", "breakpoint",
-            "show_start", "show_end", "dj_join", "dj_leave"
+            "show_start", "show_end", "dj_join", "dj_leave", "spotlight"
         )
         assertEquals(known, parseResponse(*known.toTypedArray()).toPlaycuts().map { it.entryType })
+    }
+
+    private fun spotlightRow(role: String, name: String = "Cat Power") =
+        """{"id":9,"show_id":1,"play_order":9,"add_time":"2026-09-12T20:44:22.679Z","entry_type":"spotlight","spotlight_role":"$role","spotlight_name":"$name","message":"server fallback","dj_name":"DJ Sidechain"}"""
+
+    @Test
+    fun `spotlight rows render the iOS role line, with a neutral line for an unknown role`() {
+        val cases = mapOf(
+            "guest" to "In the studio: Cat Power",
+            "performer" to "Live in the studio: Cat Power",
+            "reader" to "Reading now: Cat Power",
+            "dj" to "Now mixing: Cat Power",
+            "host" to null,
+            "future_role" to "On air: Cat Power",
+        )
+        for ((role, expected) in cases) {
+            val playcut = parse(spotlightRow(role)).toDomain()
+            assertEquals(role, expected, playcut.displayMessage)
+            assertEquals("spotlight", playcut.entryType)
+            assertNotNull(playcut.hour)
+        }
+    }
+
+    @Test
+    fun `on_air is unknown when absent, automation when null, and live when an object`() {
+        fun on(json: String) = gson.fromJson(json, FlowsheetResponseDto::class.java).onAir
+
+        assertEquals(OnAir.Unknown, on("""{"entries":[]}"""))
+        assertEquals(OnAir.Automation, on("""{"entries":[],"on_air":null}"""))
+
+        val live = on("""{"entries":[],"on_air":{"dj_name":"DJ Sidechain","show_id":7}}""") as OnAir.Live
+        assertEquals("DJ Sidechain", live.djName)
+        assertEquals(7, live.showId)
+        assertNull(live.spotlight)
+
+        val withSpotlight = on(
+            """{"entries":[],"on_air":{"dj_name":"DJ Sidechain","show_id":7,"spotlight":${spotlightRow("performer", "Stereolab")}}}"""
+        ) as OnAir.Live
+        assertEquals("Stereolab", withSpotlight.spotlight?.spotlightName)
+        assertEquals("performer", withSpotlight.spotlight?.spotlightRole)
     }
 }
