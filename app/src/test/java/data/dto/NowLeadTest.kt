@@ -50,6 +50,8 @@ class NowLeadTest {
                 entryLead("On air: Cat Power")),
             Case("null on-air show id", listOf(song(5)), live(entry("guest", 10), showId = null), songLead),
             Case("zero show id on both sides", listOf(song(5, showId = 0)), live(entry("guest", 10, showId = 0), showId = 0), songLead),
+            Case("zero song show id lets the open show's entry lead", listOf(song(50, showId = 0)), live(entry("guest", 10)),
+                entryLead("In the studio: Cat Power")),
             Case("song without artwork falls back to station artwork", listOf(song(10, art = null)), live(null), songNoArt),
             Case("no spotlight", listOf(song(10)), live(null), songLead),
             Case("automation", listOf(song(10)), OnAir.Automation, songLead),
