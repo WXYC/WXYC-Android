@@ -47,6 +47,7 @@ fun PlaylistItem(
     // message) is a marker row rendered from the server's own label text.
     when (item.entryType) {
         "track" -> SongItem(playcut = item, modifier = modifier, onClick = onClick)
+        "spotlight" -> item.displayMessage?.let { SpotlightItem(text = it, hour = item.hour, modifier = modifier) }
         else -> item.displayMessage?.let { MarkerItem(text = it, modifier = modifier) }
     }
 }
@@ -162,6 +163,52 @@ private fun MarkerItem(
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         )
     }
+}
+
+// A who's-on entry: an inline card with the role line and the time it was logged.
+@Composable
+private fun SpotlightItem(
+    text: String,
+    hour: Long?,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.3f)),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = text,
+                color = Color.White,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                modifier = Modifier.weight(1f)
+            )
+            hour?.let {
+                Text(
+                    text = formatClockTime(it),
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun formatClockTime(millis: Long): String {
+    val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.US)
+    formatter.timeZone = java.util.TimeZone.getTimeZone("America/New_York")
+    return formatter.format(java.util.Date(millis))
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
