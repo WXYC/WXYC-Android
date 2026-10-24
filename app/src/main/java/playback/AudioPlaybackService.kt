@@ -14,6 +14,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -82,7 +83,7 @@ class AudioPlaybackService : MediaSessionService() {
          * Not the 320 kbps `wxyc-alt.mp3` mount: at 144 MB/hour it is a poor
          * default over cellular, and Android was its only real consumer.
          */
-        private const val STREAM_URL = "https://audio-mp3.ibiblio.org/wxyc.mp3"
+        const val STREAM_URL = "https://audio-mp3.ibiblio.org/wxyc.mp3"
     }
 
     @OptIn(UnstableApi::class)
@@ -326,7 +327,11 @@ class AudioPlaybackService : MediaSessionService() {
         // records its origin (MediaSessionStub queues, flushCommandQueue drains), so
         // a marker written by this timer can be consumed by a user's pause that was
         // already in flight, reporting it as automatic.
-        player.setMediaItem(MediaItem.fromUri(STREAM_URL))
+        // Carry the current metadata over so a reconnect doesn't blank the notification.
+        player.setMediaItem(
+            MediaItem.Builder().setUri(STREAM_URL)
+                .setMediaMetadata(player.currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY).build()
+        )
         player.prepare()
         player.play()
     }

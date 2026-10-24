@@ -2,9 +2,14 @@ package org.wxyc.wxycapp.ui
 
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -19,6 +24,10 @@ import org.wxyc.wxycapp.data.bio.BioToken
 import org.wxyc.wxycapp.data.bio.BioTokensResult
 import org.wxyc.wxycapp.data.bio.RecentMisses
 import data.JsonImporter
+import data.dto.NowMetadata
+import data.dto.nowLead
+import org.wxyc.wxycapp.R
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,6 +86,7 @@ class PlayerViewModel @Inject constructor(
                         // Handle buffering etc if needed
                     }
                 })
+                publishNowMetadata(nowMetadata)
                 // Sync initial state
                 val isPlaying = controller?.isPlaying == true
                  _uiState.update { it.copy(isPlaying = isPlaying, isMuted = !isPlaying) }
@@ -84,6 +94,38 @@ class PlayerViewModel @Inject constructor(
                 Log.e(TAG, "Failed to connect to MediaController", e)
             }
         }, MoreExecutors.directExecutor())
+    }
+
+    private var nowMetadata: NowMetadata? = null
+    private var publishedMetadata: NowMetadata? = null
+
+    /**
+     * Hands the lead to the media session, which owns the notification and lock screen.
+     * Replacing the item's metadata in place does not restart the stream, and an
+     * unchanged lead is not sent again on every poll. The controller connects
+     * asynchronously, so the latest lead is kept and sent once it is up.
+     */
+    private fun publishNowMetadata(lead: NowMetadata?) {
+        nowMetadata = lead
+        val controller = controller ?: return
+        if (lead == publishedMetadata || controller.mediaItemCount == 0) return
+        publishedMetadata = lead
+        val metadata = MediaMetadata.Builder().apply {
+            if (lead == null) return@apply
+            setTitle(lead.title)
+            setArtist(lead.artist)
+            if (lead.artworkUrl != null) setArtworkUri(Uri.parse(lead.artworkUrl))
+            else setArtworkData(stationArtwork, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+        }.build()
+        controller.replaceMediaItem(
+            0,
+            MediaItem.Builder().setUri(AudioPlaybackService.STREAM_URL).setMediaMetadata(metadata).build()
+        )
+    }
+
+    private val stationArtwork: ByteArray by lazy {
+        val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.wxyc_mainlogo_lowqual)
+        ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
     }
 
     override fun onCleared() {
@@ -121,7 +163,9 @@ class PlayerViewModel @Inject constructor(
                   _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                 }
 
-                val playlist = jsonImporter.fetchPlaylist()
+                val flowsheet = jsonImporter.fetchPlaylist()
+                val playlist = flowsheet.playcuts
+                publishNowMetadata(nowLead(playlist, flowsheet.onAir))
                 playlistDetailsList.clear()
                 playlistDetailsList.addAll(playlist)
 
